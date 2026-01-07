@@ -1,14 +1,14 @@
 server {
     listen 80;
-    server_name localhost;
+    server_name _;
     root /var/www/html/public;
     index index.php;
     
     # 文件上传大小限制
     client_max_body_size 100M;
     
-    # CORS配置 - 允许前端访问
-    add_header Access-Control-Allow-Origin "http://localhost:9000" always;
+    # CORS配置 - 允许所有来源（生产环境应配置具体域名）
+    add_header Access-Control-Allow-Origin "*" always;
     add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH" always;
     add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Internal-Token" always;
     add_header Access-Control-Allow-Credentials "true" always;
@@ -24,7 +24,7 @@ server {
     
     # 静态文件（storage）CORS配置
     location /storage/ {
-        add_header Access-Control-Allow-Origin "http://localhost:9000" always;
+        add_header Access-Control-Allow-Origin "*" always;
         add_header Access-Control-Allow-Methods "GET, OPTIONS" always;
         add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept" always;
         add_header Access-Control-Allow-Credentials "true" always;
@@ -32,12 +32,24 @@ server {
     }
     
     location ~ \.php$ {
-        fastcgi_pass php_v2:9000;
+        # 使用环境变量配置 PHP-FPM 地址（Zeabur 服务名）
+        # 默认值：php-service:9000（Zeabur 中 PHP 服务名）
+        set $php_upstream "${PHP_FPM_HOST}:${PHP_FPM_PORT}";
+        fastcgi_pass $php_upstream;
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         include fastcgi_params;
+        
+        # FastCGI 超时设置
+        fastcgi_read_timeout 300;
+        fastcgi_connect_timeout 60;
+    }
+    
+    # 健康检查端点
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
     }
 }
-
-
 

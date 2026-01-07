@@ -1,0 +1,89 @@
+# 环境变量和密钥（最重要！）
+.env
+.env.*
+*.key
+*.pem
+*.p12
+secrets/
+*.secret
+
+# Git 信息（不要包含 Git 历史）
+.git/
+.gitignore
+.gitattributes
+.gitmodules
+
+# 配置文件（如果包含敏感信息）
+config/*.local.php
+config/*.env.php
+*.local.json
+*.local.yaml
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+database/*.sql
+database/migrations/*.sql
+
+# 日志文件
+*.log
+logs/
+storage/logs/*
+!storage/logs/.gitkeep
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 测试文件
+tests/
+phpunit.xml
+.phpunit.result.cache
+tests/
+
+# 文档（可选，减少镜像大小）
+docs/
+*.md
+!README.md
+
+# 临时文件
+*.tmp
+*.bak
+*.old
+*.cache
+
+# 构建文件
+vendor/
+node_modules/
+bootstrap/cache/*
+!bootstrap/cache/.gitkeep
+storage/framework/cache/*
+!storage/framework/cache/.gitkeep
+storage/framework/sessions/*
+!storage/framework/sessions/.gitkeep
+storage/framework/views/*
+!storage/framework/views/.gitkeep
+
+# Composer
+composer.phar
+composer.lock
+
+# NPM
+package-lock.json
+yarn.lock
+
+# 备份文件
+*.backup
+*.dump
+
+# 开发工具
+.phpstorm.meta.php
+_ide_helper.php
+_ide_helper_models.php
+
