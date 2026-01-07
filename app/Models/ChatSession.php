@@ -457,5 +457,3 @@ class ChatSession extends Model
 
 
 
-
-
