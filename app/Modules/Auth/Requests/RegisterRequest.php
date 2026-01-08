@@ -21,6 +21,7 @@ class RegisterRequest extends FormRequest
         return [
             'nickname' => 'required|string|min:2|max:50|unique:users,name',
             'email' => 'required|email|unique:users,email',
+            'email_code' => 'required|string|size:6',
             'password' => 'required|string|min:6|confirmed',
             'phone' => 'nullable|string|regex:/^1[3-9]\d{9}$/',
             'gender' => 'nullable|string|in:male,female',
@@ -37,6 +38,8 @@ class RegisterRequest extends FormRequest
             'email.required' => '请输入邮箱',
             'email.email' => '邮箱格式不正确',
             'email.unique' => '邮箱已被注册',
+            'email_code.required' => '请输入邮箱验证码',
+            'email_code.size' => '验证码必须是6位',
             'password.required' => '请输入密码',
             'password.min' => '密码至少6位',
             'password.confirmed' => '两次密码不一致',
