@@ -16,6 +16,9 @@ Route::prefix('membership')->group(function () {
     
     // ========== 公开路由 ==========
     
+    // 获取会员系统配置（前端用于控制UI显示）
+    Route::get('/config', [MembershipController::class, 'getConfig']);
+    
     // 获取所有会员等级
     Route::get('/tiers', [MembershipController::class, 'index']);
     
