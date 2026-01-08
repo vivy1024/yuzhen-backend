@@ -1,7 +1,7 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.71.0
-**更新日期**: 2026-01-08
+**版本**: v2.72.0
+**更新日期**: 2026-01-09
 **项目状态**: ✅ 生产运行
 
 ---
@@ -16,6 +16,45 @@
 ---
 
 ## 版本历史
+
+### v2.72.0 (2026-01-09) - 会员系统配置开关（合规要求）✨
+
+**变更类型**: ✨ 新功能
+
+**功能描述**:
+添加会员系统配置开关，支持在个人开发者阶段禁用会员购买功能，符合ICP备案合规要求。
+获得企业资质后可通过环境变量一键启用会员系统。
+
+**新增文件**:
+- `config/membership.php` - 会员系统配置文件
+  - `MEMBERSHIP_SYSTEM_ENABLED` 环境变量控制开关
+  - `unified_limits` 统一用户限制（禁用时使用）
+  - `donation_rewards` 打赏奖励配置
+- `app/Modules/Membership/Services/MembershipConfigService.php` - 配置服务
+  - `isEnabled()` - 检查会员系统是否启用
+  - `getUserLimits()` - 获取用户限制
+  - `getFrontendConfig()` - 获取前端UI控制配置
+
+**修改文件**:
+- `app/Modules/Membership/Controllers/MembershipController.php`
+  - 新增 `getConfig()` 方法，提供 `/api/membership/config` 端点
+  - 更新 `index()` 和 `getCurrent()` 方法，支持配置开关
+- `routes/modules/membership.php` - 添加配置路由
+- `.env` / `.env.production` - 添加 `MEMBERSHIP_SYSTEM_ENABLED=false`
+
+**统一用户限制（会员系统禁用时）**:
+- AI对话: 每天10次
+- 训练计划: 最多5个
+- DAG模板: 全部13个开放
+- 复杂度限制: simple=10, medium=5, complex=3
+
+**合规说明**:
+- 个人开发者没有企业资质，个人ICP备案不能涉及经营性业务
+- 会员订阅属于经营性业务，需要企业资质
+- 当前采用打赏模式替代会员系统
+- 获得个人独资企业资质后，设置 `MEMBERSHIP_SYSTEM_ENABLED=true` 即可启用
+
+---
 
 ### v2.71.0 (2026-01-08) - 修复Zeabur生产环境Redis连接问题 🐛
 
