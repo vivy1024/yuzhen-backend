@@ -4,7 +4,7 @@ namespace App\Modules\Auth\Services;
 
 use App\Mail\VerificationCodeMail;
 use App\Modules\User\Models\User;
-use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Exception;
@@ -15,7 +15,11 @@ use Exception;
  * 提供邮箱验证码的发送、验证、频率限制等功能
  * 使用Laravel内置Mail功能，支持腾讯企业邮箱和Gmail
  * 
- * @version 1.0.0
+ * v1.1.0 - 改用Laravel Cache替代直接Redis调用
+ * - 支持多种缓存驱动（file/redis/database）
+ * - 生产环境更稳定，避免Redis连接问题
+ * 
+ * @version 1.1.0
  */
 class EmailService
 {
@@ -30,8 +34,8 @@ class EmailService
     private int $verifyFailLimit;
     private int $lockDuration;
     
-    // Redis Key前缀
-    private array $redisKeys;
+    // Cache Key前缀
+    private array $cacheKeys;
 
     public function __construct(JwtService $jwtService)
     {
@@ -46,7 +50,7 @@ class EmailService
         $this->verifyFailLimit = 5;
         $this->lockDuration = 900;
         
-        $this->redisKeys = [
+        $this->cacheKeys = [
             'code' => 'email:code:',
             'send_time' => 'email:send_time:',
             'daily_count' => 'email:daily_count:',
@@ -93,23 +97,23 @@ class EmailService
         try {
             Mail::to($email)->send(new VerificationCodeMail($code));
             
-            // 5. 存储验证码到Redis
-            $codeKey = $this->redisKeys['code'] . $email;
-            Redis::setex($codeKey, $this->codeExpire, $code);
+            // 5. 存储验证码到缓存
+            $codeKey = $this->cacheKeys['code'] . $email;
+            Cache::put($codeKey, $code, $this->codeExpire);
             
             // 6. 记录发送时间
-            $sendTimeKey = $this->redisKeys['send_time'] . $email;
-            Redis::setex($sendTimeKey, $this->sendInterval, time());
+            $sendTimeKey = $this->cacheKeys['send_time'] . $email;
+            Cache::put($sendTimeKey, time(), $this->sendInterval);
             
             // 7. 增加每日发送计数
-            $dailyCountKey = $this->redisKeys['daily_count'] . $email . ':' . date('Y-m-d');
-            Redis::incr($dailyCountKey);
-            Redis::expire($dailyCountKey, 86400);
+            $dailyCountKey = $this->cacheKeys['daily_count'] . $email . ':' . date('Y-m-d');
+            $dailyCount = Cache::get($dailyCountKey, 0);
+            Cache::put($dailyCountKey, $dailyCount + 1, 86400);
             
             // 8. 增加IP每分钟计数
-            $ipCountKey = $this->redisKeys['ip_count'] . $ip . ':' . date('YmdHi');
-            Redis::incr($ipCountKey);
-            Redis::expire($ipCountKey, 60);
+            $ipCountKey = $this->cacheKeys['ip_count'] . $ip . ':' . date('YmdHi');
+            $ipCount = Cache::get($ipCountKey, 0);
+            Cache::put($ipCountKey, $ipCount + 1, 60);
             
             // 9. 记录日志（邮箱脱敏）
             $maskedEmail = $this->maskEmail($email);
@@ -151,9 +155,9 @@ class EmailService
     public function verifyCode(string $email, string $code): array
     {
         // 1. 检查是否被锁定
-        $lockedKey = $this->redisKeys['locked'] . $email;
-        if (Redis::exists($lockedKey)) {
-            $ttl = Redis::ttl($lockedKey);
+        $lockedKey = $this->cacheKeys['locked'] . $email;
+        if (Cache::has($lockedKey)) {
+            $ttl = $this->getRemainingTtl($lockedKey);
             return [
                 'success' => false,
                 'message' => "验证失败次数过多，请{$ttl}秒后重试",
@@ -161,8 +165,8 @@ class EmailService
         }
 
         // 2. 获取存储的验证码
-        $codeKey = $this->redisKeys['code'] . $email;
-        $storedCode = Redis::get($codeKey);
+        $codeKey = $this->cacheKeys['code'] . $email;
+        $storedCode = Cache::get($codeKey);
 
         if (!$storedCode) {
             return [
@@ -174,13 +178,13 @@ class EmailService
         // 3. 验证验证码
         if ($code !== $storedCode) {
             // 增加失败计数
-            $failCountKey = $this->redisKeys['fail_count'] . $email;
-            $failCount = Redis::incr($failCountKey);
-            Redis::expire($failCountKey, $this->lockDuration);
+            $failCountKey = $this->cacheKeys['fail_count'] . $email;
+            $failCount = Cache::get($failCountKey, 0) + 1;
+            Cache::put($failCountKey, $failCount, $this->lockDuration);
 
             // 检查是否需要锁定
             if ($failCount >= $this->verifyFailLimit) {
-                Redis::setex($lockedKey, $this->lockDuration, '1');
+                Cache::put($lockedKey, '1', $this->lockDuration);
                 Log::warning('邮箱验证失败次数过多，已锁定', [
                     'email' => $this->maskEmail($email),
                     'fail_count' => $failCount,
@@ -203,8 +207,8 @@ class EmailService
         }
 
         // 4. 验证成功，删除验证码
-        Redis::del($codeKey);
-        Redis::del($this->redisKeys['fail_count'] . $email);
+        Cache::forget($codeKey);
+        Cache::forget($this->cacheKeys['fail_count'] . $email);
 
         Log::info('邮箱验证码验证成功', [
             'email' => $this->maskEmail($email),
@@ -214,6 +218,19 @@ class EmailService
             'success' => true,
             'message' => '验证成功',
         ];
+    }
+    
+    /**
+     * 获取缓存键的剩余TTL（秒）
+     * 
+     * @param string $key 缓存键
+     * @return int 剩余秒数
+     */
+    private function getRemainingTtl(string $key): int
+    {
+        // Laravel Cache不直接支持TTL查询，使用默认值
+        // 实际TTL由缓存驱动管理
+        return $this->lockDuration;
     }
 
     /**
@@ -283,9 +300,9 @@ class EmailService
     private function checkRateLimit(string $email, string $ip): array
     {
         // 1. 检查是否被锁定
-        $lockedKey = $this->redisKeys['locked'] . $email;
-        if (Redis::exists($lockedKey)) {
-            $ttl = Redis::ttl($lockedKey);
+        $lockedKey = $this->cacheKeys['locked'] . $email;
+        if (Cache::has($lockedKey)) {
+            $ttl = $this->getRemainingTtl($lockedKey);
             return [
                 'allowed' => false,
                 'message' => "该邮箱已被锁定，请{$ttl}秒后重试",
@@ -294,19 +311,18 @@ class EmailService
         }
 
         // 2. 检查发送间隔（60秒）
-        $sendTimeKey = $this->redisKeys['send_time'] . $email;
-        if (Redis::exists($sendTimeKey)) {
-            $ttl = Redis::ttl($sendTimeKey);
+        $sendTimeKey = $this->cacheKeys['send_time'] . $email;
+        if (Cache::has($sendTimeKey)) {
             return [
                 'allowed' => false,
-                'message' => "发送过于频繁，请{$ttl}秒后重试",
-                'wait_seconds' => $ttl,
+                'message' => "发送过于频繁，请{$this->sendInterval}秒后重试",
+                'wait_seconds' => $this->sendInterval,
             ];
         }
 
         // 3. 检查每日发送次数（10次）
-        $dailyCountKey = $this->redisKeys['daily_count'] . $email . ':' . date('Y-m-d');
-        $dailyCount = (int)Redis::get($dailyCountKey);
+        $dailyCountKey = $this->cacheKeys['daily_count'] . $email . ':' . date('Y-m-d');
+        $dailyCount = (int)Cache::get($dailyCountKey, 0);
         if ($dailyCount >= $this->dailyLimit) {
             return [
                 'allowed' => false,
@@ -316,8 +332,8 @@ class EmailService
         }
 
         // 4. 检查IP每分钟发送次数（5次）
-        $ipCountKey = $this->redisKeys['ip_count'] . $ip . ':' . date('YmdHi');
-        $ipCount = (int)Redis::get($ipCountKey);
+        $ipCountKey = $this->cacheKeys['ip_count'] . $ip . ':' . date('YmdHi');
+        $ipCount = (int)Cache::get($ipCountKey, 0);
         if ($ipCount >= $this->ipMinuteLimit) {
             return [
                 'allowed' => false,

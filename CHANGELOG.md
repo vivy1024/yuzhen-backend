@@ -1,7 +1,7 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.70.0
-**更新日期**: 2026-01-07
+**版本**: v2.71.0
+**更新日期**: 2026-01-08
 **项目状态**: ✅ 生产运行
 
 ---
@@ -16,6 +16,31 @@
 ---
 
 ## 版本历史
+
+### v2.71.0 (2026-01-08) - 修复Zeabur生产环境Redis连接问题 🐛
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**:
+Zeabur生产环境中Redis连接超时，导致登录/注册功能失败。
+根本原因：EmailService直接使用Redis Facade，而Zeabur内网域名与本地Docker网络不同。
+
+**解决方案**:
+1. EmailService改用Laravel Cache Facade替代直接Redis调用
+2. 生产环境使用file缓存驱动，避免Redis连接问题
+3. 添加.env.production配置文件，区分本地和生产环境
+
+**修改文件**:
+- `app/Modules/Auth/Services/EmailService.php` - 改用Cache Facade（v1.1.0）
+- `docker/entrypoint.sh` - 支持生产环境配置检测
+- `.env.production` - 新增Zeabur生产环境配置
+
+**技术改进**:
+- 使用Laravel Cache抽象层，支持多种缓存驱动（file/redis/database）
+- 生产环境更稳定，核心功能不依赖Redis连接
+- 保持API接口不变，对前端透明
+
+---
 
 ### v2.70.0 (2026-01-07) - Help模块（帮助中心FAQ系统）✨
 
