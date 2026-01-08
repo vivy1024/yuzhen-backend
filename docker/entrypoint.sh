@@ -3,11 +3,34 @@
 # 不使用 set -e，允许某些命令失败后继续执行
 
 echo "Starting Laravel application..."
+echo "APP_ENV: ${APP_ENV:-not set}"
 
-# 如果没有.env文件，从环境变量创建
-if [ ! -f /var/www/html/.env ]; then
-    echo "Creating .env file from environment variables..."
-    touch /var/www/html/.env
+cd /var/www/html
+
+# 根据环境选择配置文件
+if [ "$APP_ENV" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
+    echo "Detected production/Zeabur environment"
+    
+    # 如果存在.env.production，使用它作为基础
+    if [ -f /var/www/html/.env.production ]; then
+        echo "Using .env.production as base configuration..."
+        cp /var/www/html/.env.production /var/www/html/.env
+    fi
+    
+    # Zeabur环境变量会自动覆盖.env中的值
+    echo "Zeabur environment variables will override .env values"
+    
+    # 打印Redis配置（调试用）
+    echo "REDIS_HOST: ${REDIS_HOST:-not set}"
+    echo "REDIS_PORT: ${REDIS_PORT:-not set}"
+    echo "REDIS_PASSWORD: ${REDIS_PASSWORD:+[SET]}"
+else
+    echo "Detected local/development environment"
+    # 本地开发环境，如果没有.env文件则创建空文件
+    if [ ! -f /var/www/html/.env ]; then
+        echo "Creating empty .env file..."
+        touch /var/www/html/.env
+    fi
 fi
 
 # 设置目录权限
