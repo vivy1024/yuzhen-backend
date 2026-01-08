@@ -1,10 +1,10 @@
-# PHP 8.3 + Laravel 环境 - 新后端
+# PHP 8.3 + Nginx 一体化镜像 - Zeabur生产环境
 FROM php:8.3-fpm
 
 # 设置工作目录
 WORKDIR /var/www/html
 
-# 安装系统依赖
+# 安装系统依赖 + Nginx
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     libwebp-dev \
+    nginx \
+    supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装 PHP 扩展
@@ -38,23 +40,28 @@ RUN echo "memory_limit = 512M" > /usr/local/etc/php/conf.d/memory-limit.ini \
     && echo "post_max_size = 100M" >> /usr/local/etc/php/conf.d/upload-limit.ini \
     && echo "max_execution_time = 300" > /usr/local/etc/php/conf.d/execution-time.ini
 
+# 复制应用代码
+COPY . /var/www/html
+
+# 安装 Composer 依赖
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# 配置 Nginx
+COPY docker/nginx/default.conf /etc/nginx/sites-available/default
+RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default \
+    && rm -f /etc/nginx/sites-enabled/default.bak
+
+# 配置 Supervisor（管理nginx和php-fpm）
+RUN mkdir -p /var/log/supervisor
+COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 # 设置权限
-RUN chown -R www-data:www-data /var/www/html
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html/storage \
+    && chmod -R 755 /var/www/html/bootstrap/cache
 
 # 暴露端口
-EXPOSE 9000
+EXPOSE 80
 
-# 启动 PHP-FPM
-CMD ["php-fpm"]
-
-
-
-
-
-
-
-
-
-
-
-
+# 启动 Supervisor（同时管理nginx和php-fpm）
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
