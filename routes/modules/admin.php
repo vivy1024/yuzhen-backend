@@ -6,6 +6,7 @@ use App\Modules\Admin\Controllers\AdminSessionController;
 use App\Modules\Admin\Controllers\AdminUserController;
 use App\Modules\Admin\Controllers\AdminFeedbackController;
 use App\Modules\Admin\Controllers\MetricsProxyController;
+use App\Modules\Admin\Controllers\UserCreditsController;
 
 /**
  * Admin Module Routes
@@ -82,7 +83,17 @@ Route::prefix('admin')->middleware(['jwt.auth', 'admin'])->group(function () {
         
         // 更新用户角色
         Route::put('/{id}/role', [AdminUserController::class, 'updateRole']);
+        
+        // 获取用户用量统计
+        Route::get('/{userId}/usage', [UserCreditsController::class, 'getUserUsage']);
+        
+        // 添加额外次数（打赏奖励）
+        Route::post('/{userId}/credits', [UserCreditsController::class, 'addCredits']);
     });
+    
+    // ========== 用户额外次数管理（批量操作） ==========
+    Route::post('/users/credits/batch', [UserCreditsController::class, 'batchAddCredits']);
+    Route::get('/credits/config', [UserCreditsController::class, 'getCreditsConfig']);
     
     // ========== 监控指标代理 ==========
     Route::prefix('metrics')->group(function () {

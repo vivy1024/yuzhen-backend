@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.73.0
+**版本**: v2.74.0
 **更新日期**: 2026-01-11
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,39 @@
 ---
 
 ## 版本历史
+
+### v2.74.0 (2026-01-11) - 用量追踪与打赏奖励系统 ✨
+
+**变更类型**: ✨ 新功能
+
+**功能描述**:
+添加用户AI对话用量追踪系统，支持DAG/Agent模式分开统计。
+开发测试阶段：每日限制DAG=10次、Agent=3次，打赏后管理员可添加额外次数。
+
+**新增文件**:
+- `database/migrations/2026_01_11_000001_create_user_usage_stats_table.php`
+  - `user_usage_stats` 表：每日用量统计
+  - `user_bonus_credits` 表：打赏累计额外次数
+- `app/Modules/Membership/Services/UsageTrackingService.php`
+  - `checkLimit()` - 检查用户是否可执行查询
+  - `recordQuery()` - 记录一次查询
+  - `addBonusCredits()` - 添加额外次数（管理员）
+  - `getUserUsageStats()` - 获取用户用量统计
+- `app/Modules/Admin/Controllers/UserCreditsController.php`
+  - `GET /api/admin/users/{userId}/usage` - 获取用户用量
+  - `POST /api/admin/users/{userId}/credits` - 添加额外次数
+  - `POST /api/admin/users/credits/batch` - 批量添加
+  - `GET /api/admin/credits/config` - 获取配置
+
+**修改文件**:
+- `routes/modules/admin.php` - 添加用户额外次数管理路由
+
+**默认限制**:
+- DAG模式：每日10次
+- Agent模式：每日3次
+- 打赏奖励：5元=50次, 10元=120次, 20元=300次, 50元=1000次
+
+---
 
 ### v2.73.0 (2026-01-11) - 历史对话API（三端打通P0）✨
 
