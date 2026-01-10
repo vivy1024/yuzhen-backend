@@ -1,7 +1,7 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.72.0
-**更新日期**: 2026-01-09
+**版本**: v2.73.0
+**更新日期**: 2026-01-11
 **项目状态**: ✅ 生产运行
 
 ---
@@ -16,6 +16,35 @@
 ---
 
 ## 版本历史
+
+### v2.73.0 (2026-01-11) - 历史对话API（三端打通P0）✨
+
+**变更类型**: ✨ 新功能
+
+**功能描述**:
+添加历史对话和会话管理API，实现三端（DAML-RAG、PHP后端、前端PWA）历史对话功能打通。
+这是DAML-RAG开源项目的P0任务之一。
+
+**新增API**:
+- `GET /api/chat/history` - 获取用户对话历史
+  - 支持分页（limit, offset）
+  - 支持按话题筛选（topic_id）
+  - 支持按会话筛选（session_id）
+- `GET /api/chat/sessions` - 获取用户会话列表
+  - 按session_id分组
+  - 返回每个会话的消息数量和最后消息
+- `GET /api/chat/sessions/{sessionId}` - 获取单个会话详情
+  - 返回会话的所有对话记录
+  - 格式化为消息列表（user/assistant交替）
+- `DELETE /api/chat/sessions/{sessionId}` - 删除会话
+
+**修改文件**:
+- `app/Http/Controllers/Api/ChatTopicController.php` - 添加4个新方法
+- `routes/modules/chat-topic.php` - 添加4个新路由
+
+**Requirements**: 1.1-1.6 对话历史与上下文管理
+
+---
 
 ### v2.72.0 (2026-01-09) - 会员系统配置开关（合规要求）✨
 

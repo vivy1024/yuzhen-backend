@@ -4,20 +4,348 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ChatTopic;
+use App\Models\ChatSession;
+use App\Models\ChatMessage;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 /**
  * ChatTopicController - AI聊天话题管理
  * 
  * 提供话题的增删查改接口，用于组织用户的AI对话
+ * 包含历史对话和会话管理功能
  * 
- * @version 1.0.0
- * @date 2025-01-02
+ * @version 2.0.0
+ * @date 2026-01-11
+ * @requirements 1.1-1.6 对话历史与上下文管理
  */
 class ChatTopicController extends Controller
 {
+    /**
+     * 获取用户对话历史
+     * GET /api/chat/history
+     * 
+     * 返回用户的对话历史，支持分页和按话题筛选
+     * 
+     * @requirements 1.2 检索用户最近的对话历史
+     * 
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function history(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $topicId = $request->get('topic_id');
+            $limit = min($request->get('limit', 20), 100);
+            $offset = $request->get('offset', 0);
+            $sessionId = $request->get('session_id');
+            
+            // 构建查询
+            $query = ChatSession::where('user_id', $user->id)
+                ->orderBy('created_at', 'desc');
+            
+            // 按话题筛选
+            if ($topicId) {
+                $query->where('topic_id', $topicId);
+            }
+            
+            // 按会话筛选
+            if ($sessionId) {
+                $query->where('session_id', $sessionId);
+            }
+            
+            // 获取总数
+            $total = $query->count();
+            
+            // 分页获取
+            $sessions = $query->skip($offset)->take($limit)->get();
+            
+            // 格式化返回数据
+            $history = $sessions->map(function ($session) {
+                return [
+                    'id' => $session->id,
+                    'sessionId' => $session->session_id,
+                    'topicId' => $session->topic_id,
+                    'userQuery' => $session->user_query,
+                    'llmResponse' => $session->llm_response,
+                    'modelUsed' => $session->model_used,
+                    'toolsUsed' => $session->tools_used,
+                    'userRating' => $session->user_rating,
+                    'userFeedback' => $session->user_feedback,
+                    'metadata' => $session->metadata,
+                    'createdAt' => $session->created_at->toIso8601String(),
+                    'updatedAt' => $session->updated_at->toIso8601String(),
+                ];
+            });
+            
+            return response()->json([
+                'code' => 200,
+                'msg' => '获取成功',
+                'data' => [
+                    'total' => $total,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'history' => $history,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('获取对话历史失败', [
+                'error' => $e->getMessage(),
+                'user_id' => $request->user()->id ?? null,
+            ]);
+            
+            return response()->json([
+                'code' => 500,
+                'msg' => '获取对话历史失败',
+                'data' => null
+            ], 500);
+        }
+    }
+    
+    /**
+     * 获取用户会话列表
+     * GET /api/chat/sessions
+     * 
+     * 返回用户的会话列表，按session_id分组
+     * 
+     * @requirements 1.5 创建新会话ID并初始化
+     * 
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function sessions(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $limit = min($request->get('limit', 20), 100);
+            $offset = $request->get('offset', 0);
+            
+            // 按session_id分组，获取每个会话的最新记录
+            $sessionsQuery = ChatSession::where('user_id', $user->id)
+                ->select('session_id', DB::raw('MAX(id) as latest_id'))
+                ->groupBy('session_id')
+                ->orderBy('latest_id', 'desc');
+            
+            // 获取总数
+            $total = $sessionsQuery->get()->count();
+            
+            // 分页获取
+            $sessionGroups = $sessionsQuery->skip($offset)->take($limit)->get();
+            
+            // 获取完整的会话信息
+            $latestIds = $sessionGroups->pluck('latest_id');
+            $latestSessions = ChatSession::whereIn('id', $latestIds)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->keyBy('session_id');
+            
+            // 获取每个会话的消息数量
+            $messageCounts = ChatSession::where('user_id', $user->id)
+                ->whereIn('session_id', $sessionGroups->pluck('session_id'))
+                ->select('session_id', DB::raw('COUNT(*) as count'))
+                ->groupBy('session_id')
+                ->get()
+                ->keyBy('session_id');
+            
+            // 格式化返回数据
+            $sessions = $sessionGroups->map(function ($group) use ($latestSessions, $messageCounts) {
+                $session = $latestSessions->get($group->session_id);
+                $count = $messageCounts->get($group->session_id);
+                
+                if (!$session) {
+                    return null;
+                }
+                
+                // 生成会话标题（取第一条用户问题的前50个字符）
+                $firstQuery = ChatSession::where('session_id', $group->session_id)
+                    ->orderBy('created_at', 'asc')
+                    ->value('user_query');
+                $title = $firstQuery ? mb_substr($firstQuery, 0, 50) : '新对话';
+                
+                return [
+                    'sessionId' => $session->session_id,
+                    'title' => $title,
+                    'topicId' => $session->topic_id,
+                    'messageCount' => $count ? $count->count : 0,
+                    'lastQuery' => mb_substr($session->user_query, 0, 100),
+                    'lastResponse' => mb_substr($session->llm_response, 0, 100),
+                    'modelUsed' => $session->model_used,
+                    'createdAt' => $session->created_at->toIso8601String(),
+                    'updatedAt' => $session->updated_at->toIso8601String(),
+                ];
+            })->filter()->values();
+            
+            return response()->json([
+                'code' => 200,
+                'msg' => '获取成功',
+                'data' => [
+                    'total' => $total,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'sessions' => $sessions,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('获取会话列表失败', [
+                'error' => $e->getMessage(),
+                'user_id' => $request->user()->id ?? null,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return response()->json([
+                'code' => 500,
+                'msg' => '获取会话列表失败',
+                'data' => null
+            ], 500);
+        }
+    }
+    
+    /**
+     * 获取单个会话的详细对话
+     * GET /api/chat/sessions/{sessionId}
+     * 
+     * 返回指定会话的所有对话记录
+     * 
+     * @param Request $request
+     * @param string $sessionId
+     * @return JsonResponse
+     */
+    public function sessionDetail(Request $request, string $sessionId): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            
+            // 获取会话的所有对话
+            $conversations = ChatSession::where('user_id', $user->id)
+                ->where('session_id', $sessionId)
+                ->orderBy('created_at', 'asc')
+                ->get();
+            
+            if ($conversations->isEmpty()) {
+                return response()->json([
+                    'code' => 404,
+                    'msg' => '会话不存在',
+                    'data' => null
+                ], 404);
+            }
+            
+            // 格式化为消息列表
+            $messages = [];
+            foreach ($conversations as $conv) {
+                // 用户消息
+                $messages[] = [
+                    'id' => "user-{$conv->id}",
+                    'role' => 'user',
+                    'content' => $conv->user_query,
+                    'timestamp' => $conv->created_at->timestamp * 1000,
+                ];
+                
+                // AI回复
+                $messages[] = [
+                    'id' => "assistant-{$conv->id}",
+                    'role' => 'assistant',
+                    'content' => $conv->llm_response,
+                    'timestamp' => $conv->created_at->timestamp * 1000 + 1,
+                    'modelUsed' => $conv->model_used,
+                    'toolsUsed' => $conv->tools_used,
+                    'metadata' => $conv->metadata,
+                ];
+            }
+            
+            $firstConv = $conversations->first();
+            $lastConv = $conversations->last();
+            
+            return response()->json([
+                'code' => 200,
+                'msg' => '获取成功',
+                'data' => [
+                    'sessionId' => $sessionId,
+                    'topicId' => $firstConv->topic_id,
+                    'messageCount' => count($messages),
+                    'messages' => $messages,
+                    'createdAt' => $firstConv->created_at->toIso8601String(),
+                    'updatedAt' => $lastConv->updated_at->toIso8601String(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('获取会话详情失败', [
+                'error' => $e->getMessage(),
+                'session_id' => $sessionId,
+                'user_id' => $request->user()->id ?? null,
+            ]);
+            
+            return response()->json([
+                'code' => 500,
+                'msg' => '获取会话详情失败',
+                'data' => null
+            ], 500);
+        }
+    }
+    
+    /**
+     * 删除会话
+     * DELETE /api/chat/sessions/{sessionId}
+     * 
+     * 删除指定会话的所有对话记录
+     * 
+     * @param Request $request
+     * @param string $sessionId
+     * @return JsonResponse
+     */
+    public function deleteSession(Request $request, string $sessionId): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            
+            // 检查会话是否存在
+            $count = ChatSession::where('user_id', $user->id)
+                ->where('session_id', $sessionId)
+                ->count();
+            
+            if ($count === 0) {
+                return response()->json([
+                    'code' => 404,
+                    'msg' => '会话不存在',
+                    'data' => null
+                ], 404);
+            }
+            
+            // 删除会话的所有记录
+            $deleted = ChatSession::where('user_id', $user->id)
+                ->where('session_id', $sessionId)
+                ->delete();
+            
+            Log::info('删除会话成功', [
+                'session_id' => $sessionId,
+                'user_id' => $user->id,
+                'deleted_count' => $deleted,
+            ]);
+            
+            return response()->json([
+                'code' => 200,
+                'msg' => '删除成功',
+                'data' => [
+                    'sessionId' => $sessionId,
+                    'deletedCount' => $deleted,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('删除会话失败', [
+                'error' => $e->getMessage(),
+                'session_id' => $sessionId,
+                'user_id' => $request->user()->id ?? null,
+            ]);
+            
+            return response()->json([
+                'code' => 500,
+                'msg' => '删除会话失败',
+                'data' => null
+            ], 500);
+        }
+    }
     /**
      * 获取话题列表
      * GET /api/chat/topics

@@ -7,12 +7,22 @@ use App\Http\Controllers\Api\ChatTopicController;
  * Chat Topic Routes - AI聊天话题管理
  * 
  * 提供话题的增删查改接口，用于组织用户的AI对话
+ * 包含历史对话和会话管理功能
  * 
- * @version 1.0.0
- * @date 2025-01-02
+ * @version 2.0.0
+ * @date 2026-01-11
+ * @requirements 1.1-1.6 对话历史与上下文管理
  */
 
 Route::middleware('jwt.auth')->prefix('chat')->group(function () {
+    // 对话历史 - Requirements 1.2
+    Route::get('/history', [ChatTopicController::class, 'history']);
+    
+    // 会话管理 - Requirements 1.5
+    Route::get('/sessions', [ChatTopicController::class, 'sessions']);
+    Route::get('/sessions/{sessionId}', [ChatTopicController::class, 'sessionDetail']);
+    Route::delete('/sessions/{sessionId}', [ChatTopicController::class, 'deleteSession']);
+    
     // 话题管理
     Route::get('/topics', [ChatTopicController::class, 'index']);
     Route::post('/topics', [ChatTopicController::class, 'store']);
