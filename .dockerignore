@@ -1,6 +1,9 @@
 # 环境变量和密钥（最重要！）
 .env
-.env.*
+.env.local
+.env.*.local
+# 注意：.env.production 需要被包含，用于生产环境配置
+!.env.production
 *.key
 *.pem
 *.p12
