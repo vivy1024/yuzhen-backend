@@ -22,6 +22,9 @@ Route::prefix('membership')->group(function () {
     // 获取所有会员等级
     Route::get('/tiers', [MembershipController::class, 'index']);
     
+    // 获取所有可购买的会员套餐
+    Route::get('/plans', [MembershipController::class, 'plans']);
+    
     // 获取支付截图（图片代理，绕过ORB限制，无需认证）
     Route::get('/orders/{orderNo}/proof-image', [OrderController::class, 'getProofImage']);
     
