@@ -4,8 +4,12 @@ FROM php:8.3-fpm
 # 设置工作目录
 WORKDIR /var/www/html
 
-# 安装系统依赖 + Nginx
-RUN apt-get update && apt-get install -y \
+# 配置国内镜像源（阿里云）解决Zeabur构建网络问题
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || \
+    sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list 2>/dev/null || true
+
+# 安装系统依赖 + Nginx（添加重试机制）
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     libpng-dev \
