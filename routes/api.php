@@ -205,6 +205,9 @@ require __DIR__.'/modules/social.php';
 // Membership模块 ✅
 require __DIR__.'/modules/membership.php';
 
+// Usage模块（用量管理）✅
+require __DIR__.'/modules/usage.php';
+
 // Internal API（MCP/CrewAI访问）✅
 require __DIR__.'/internal.php';
 
