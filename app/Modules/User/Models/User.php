@@ -10,9 +10,14 @@ use App\Models\UserMembership;
 use App\Models\Membership;
 use App\Models\TrainingLog;
 use App\Models\PersonalBest;
+use App\Models\UsageStat;
+use App\Models\UserCredit;
+use App\Models\CreditLog;
+use App\Models\MembershipOrder;
+use App\Models\Referral;
 
 /**
- * User Model
+ * User Model - 会员自动化控制系统扩展
  * 
  * 用户模型
  * 
@@ -24,6 +29,13 @@ use App\Models\PersonalBest;
  * @property string $avatar
  * @property string $role
  * @property int $status
+ * @property string $membership_tier 会员等级 (free/warmheart/energy)
+ * @property bool $first_purchase_used 是否已使用首充优惠
+ * @property string|null $referral_code 用户推荐码
+ * 
+ * @version v1.1.0
+ * @date 2026-01-11
+ * @author 薛小川
  */
 class User extends Authenticatable
 {
@@ -50,6 +62,8 @@ class User extends Authenticatable
         'last_login_ip',
         'onboarding_completed',
         'membership_tier',
+        'first_purchase_used',
+        'referral_code',
         // 智能训练系统新增字段
         'preferred_training_time',
         'body_type',
@@ -78,6 +92,7 @@ class User extends Authenticatable
         'last_volume_adjusted_at' => 'datetime',
         'password' => 'hashed',
         'status' => 'integer',
+        'first_purchase_used' => 'boolean',
         'personal_volume_multiplier' => 'decimal:2',
         'personal_recovery_factor' => 'decimal:2',
         'consecutive_training_weeks' => 'integer',
@@ -238,6 +253,121 @@ class User extends Authenticatable
     public function isWorker(): bool
     {
         return $this->user_type === 'worker';
+    }
+
+    // ==================== 会员自动化控制系统关联 ====================
+
+    /**
+     * 关联：用量统计记录
+     */
+    public function usageStats()
+    {
+        return $this->hasMany(UsageStat::class);
+    }
+
+    /**
+     * 关联：用户额度
+     */
+    public function credits()
+    {
+        return $this->hasOne(UserCredit::class);
+    }
+
+    /**
+     * 关联：额度变更日志
+     */
+    public function creditLogs()
+    {
+        return $this->hasMany(CreditLog::class);
+    }
+
+    /**
+     * 关联：会员订单
+     */
+    public function membershipOrders()
+    {
+        return $this->hasMany(MembershipOrder::class);
+    }
+
+    /**
+     * 关联：作为推荐人的推荐记录
+     */
+    public function referrals()
+    {
+        return $this->hasMany(Referral::class, 'referrer_id');
+    }
+
+    /**
+     * 关联：被推荐记录（作为被推荐人）
+     */
+    public function referredBy()
+    {
+        return $this->hasOne(Referral::class, 'referee_id');
+    }
+
+    /**
+     * 获取或创建用户额度记录
+     * 
+     * @return UserCredit
+     */
+    public function getOrCreateCredits(): UserCredit
+    {
+        return UserCredit::getOrCreate($this->id);
+    }
+
+    /**
+     * 获取今日用量记录
+     * 
+     * @return UsageStat
+     */
+    public function getTodayUsage(): UsageStat
+    {
+        return UsageStat::getOrCreateTodayUsage($this->id);
+    }
+
+    /**
+     * 检查是否为免费用户
+     * 
+     * @return bool
+     */
+    public function isFreeUser(): bool
+    {
+        return $this->membership_tier === 'free' || empty($this->membership_tier);
+    }
+
+    /**
+     * 检查是否为暖心会员
+     * 
+     * @return bool
+     */
+    public function isWarmheartMember(): bool
+    {
+        return $this->membership_tier === 'warmheart';
+    }
+
+    /**
+     * 检查是否为能量会员
+     * 
+     * @return bool
+     */
+    public function isEnergyMember(): bool
+    {
+        return $this->membership_tier === 'energy';
+    }
+
+    /**
+     * 生成推荐码（如果没有）
+     * 
+     * @return string
+     */
+    public function generateReferralCode(): string
+    {
+        if (!$this->referral_code) {
+            $code = strtoupper(substr(md5($this->id . time()), 0, 8));
+            $this->update(['referral_code' => $code]);
+            return $code;
+        }
+        return $this->referral_code;
     }
 }
 
