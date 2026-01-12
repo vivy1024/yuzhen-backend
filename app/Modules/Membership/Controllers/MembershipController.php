@@ -183,5 +183,52 @@ class MembershipController extends BaseController
             return $this->handleException($e, '获取统计');
         }
     }
+
+    /**
+     * 获取所有可购买的会员套餐
+     * 
+     * GET /api/membership/plans
+     * 
+     * 返回所有激活的会员套餐，包括首充优惠套餐（如果用户未使用过）
+     * 
+     * @requirements 9.3
+     */
+    public function plans(Request $request): JsonResponse
+    {
+        try {
+            // 检查会员系统是否启用
+            if (!$this->configService->isEnabled()) {
+                return $this->success([
+                    'plans' => [],
+                    'count' => 0,
+                    'system_enabled' => false,
+                    'message' => '会员系统暂未开放，当前为免费体验模式',
+                ], '会员系统暂未开放');
+            }
+            
+            // 获取用户ID（可能未登录）
+            $userId = auth()->id();
+            
+            // 使用新的MembershipService获取套餐
+            $membershipService = app(\App\Services\MembershipService::class);
+            
+            if ($userId) {
+                // 已登录用户，根据首充使用情况返回套餐
+                $plans = $membershipService->getAvailablePlansForUser($userId);
+            } else {
+                // 未登录用户，返回所有套餐（包括首充）
+                $plans = $membershipService->getAvailablePlans(true);
+            }
+            
+            return $this->success([
+                'plans' => $plans,
+                'count' => count($plans),
+                'system_enabled' => true,
+            ], '获取套餐列表成功');
+
+        } catch (\Exception $e) {
+            return $this->handleException($e, '获取套餐列表');
+        }
+    }
 }
 
