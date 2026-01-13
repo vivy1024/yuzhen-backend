@@ -18,9 +18,35 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 如果旧表存在，先删除
-        Schema::dropIfExists('user_usage_stats');
-        Schema::dropIfExists('user_bonus_credits');
+        // 如果旧表存在，先删除外键约束再删除表
+        if (Schema::hasTable('user_bonus_credits')) {
+            Schema::table('user_bonus_credits', function (Blueprint $table) {
+                // 尝试删除外键约束（如果存在）
+                try {
+                    $table->dropForeign(['user_id']);
+                } catch (\Exception $e) {
+                    // 忽略外键不存在的错误
+                }
+            });
+            Schema::dropIfExists('user_bonus_credits');
+        }
+        
+        if (Schema::hasTable('user_usage_stats')) {
+            Schema::table('user_usage_stats', function (Blueprint $table) {
+                // 尝试删除外键约束（如果存在）
+                try {
+                    $table->dropForeign(['user_id']);
+                } catch (\Exception $e) {
+                    // 忽略外键不存在的错误
+                }
+            });
+            Schema::dropIfExists('user_usage_stats');
+        }
+        
+        // 如果 usage_stats 表已存在，跳过创建
+        if (Schema::hasTable('usage_stats')) {
+            return;
+        }
         
         Schema::create('usage_stats', function (Blueprint $table) {
             $table->id();
