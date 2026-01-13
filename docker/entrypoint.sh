@@ -19,17 +19,25 @@ if [ "$APP_ENV" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
         # 替换环境变量占位符（Zeabur注入的环境变量）
         echo "Replacing environment variable placeholders..."
         
-        # 数据库配置
-        if [ -n "$DB_HOST" ]; then
-            sed -i "s|\${DB_HOST}|${DB_HOST}|g" /var/www/html/.env
-            echo "DB_HOST replaced: ${DB_HOST}"
+        # 数据库配置 - 优先使用MYSQL_*变量（Zeabur服务引用）
+        ACTUAL_DB_HOST="${MYSQL_HOST:-${DB_HOST:-localhost}}"
+        ACTUAL_DB_USER="${MYSQL_USERNAME:-${DB_USERNAME:-root}}"
+        ACTUAL_DB_PASS="${MYSQL_PASSWORD:-${DB_PASSWORD:-}}"
+        
+        if [ -n "$ACTUAL_DB_HOST" ]; then
+            sed -i "s|\${DB_HOST}|${ACTUAL_DB_HOST}|g" /var/www/html/.env
+            # 也替换硬编码的占位符
+            sed -i "s|DB_HOST=\${DB_HOST}|DB_HOST=${ACTUAL_DB_HOST}|g" /var/www/html/.env
+            echo "DB_HOST replaced: ${ACTUAL_DB_HOST}"
         fi
-        if [ -n "$DB_USERNAME" ]; then
-            sed -i "s|\${DB_USERNAME}|${DB_USERNAME}|g" /var/www/html/.env
-            echo "DB_USERNAME replaced: ${DB_USERNAME}"
+        if [ -n "$ACTUAL_DB_USER" ]; then
+            sed -i "s|\${DB_USERNAME}|${ACTUAL_DB_USER}|g" /var/www/html/.env
+            sed -i "s|DB_USERNAME=\${DB_USERNAME}|DB_USERNAME=${ACTUAL_DB_USER}|g" /var/www/html/.env
+            echo "DB_USERNAME replaced: ${ACTUAL_DB_USER}"
         fi
-        if [ -n "$DB_PASSWORD" ]; then
-            sed -i "s|\${DB_PASSWORD}|${DB_PASSWORD}|g" /var/www/html/.env
+        if [ -n "$ACTUAL_DB_PASS" ]; then
+            sed -i "s|\${DB_PASSWORD}|${ACTUAL_DB_PASS}|g" /var/www/html/.env
+            sed -i "s|DB_PASSWORD=\${DB_PASSWORD}|DB_PASSWORD=${ACTUAL_DB_PASS}|g" /var/www/html/.env
             echo "DB_PASSWORD replaced"
         fi
         
@@ -83,6 +91,28 @@ php artisan view:clear 2>/dev/null || true
 
 # 测试数据库连接（生产环境）
 if [ "$APP_ENV" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
+    echo "========== Database Connection Debug =========="
+    echo "DB_HOST from env: ${DB_HOST:-not set}"
+    echo "MYSQL_HOST from env: ${MYSQL_HOST:-not set}"
+    echo "DB_PORT from env: ${DB_PORT:-not set}"
+    echo "DB_DATABASE from env: ${DB_DATABASE:-not set}"
+    echo "DB_USERNAME from env: ${DB_USERNAME:-not set}"
+    echo "DB_PASSWORD is set: ${DB_PASSWORD:+YES}"
+    echo "MYSQL_PASSWORD is set: ${MYSQL_PASSWORD:+YES}"
+    
+    # 优先使用MYSQL_HOST（Zeabur服务引用），否则使用DB_HOST
+    ACTUAL_DB_HOST="${MYSQL_HOST:-${DB_HOST:-localhost}}"
+    ACTUAL_DB_USER="${MYSQL_USERNAME:-${DB_USERNAME:-root}}"
+    ACTUAL_DB_PASS="${MYSQL_PASSWORD:-${DB_PASSWORD:-}}"
+    ACTUAL_DB_NAME="${MYSQL_DATABASE:-${DB_DATABASE:-fitness_app}}"
+    ACTUAL_DB_PORT="${MYSQL_PORT:-${DB_PORT:-3306}}"
+    
+    echo "Using DB_HOST: ${ACTUAL_DB_HOST}"
+    echo "Using DB_USER: ${ACTUAL_DB_USER}"
+    echo "Using DB_NAME: ${ACTUAL_DB_NAME}"
+    echo "Using DB_PORT: ${ACTUAL_DB_PORT}"
+    echo "=============================================="
+    
     echo "Testing database connection..."
     
     # 等待数据库可用（最多30秒）
@@ -90,13 +120,15 @@ if [ "$APP_ENV" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
     RETRY_COUNT=0
     
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-        # 使用PHP测试数据库连接
+        # 使用PHP测试数据库连接，使用实际解析的变量
         if php -r "
-            \$host = getenv('DB_HOST') ?: 'localhost';
-            \$port = getenv('DB_PORT') ?: '3306';
-            \$user = getenv('DB_USERNAME') ?: 'root';
-            \$pass = getenv('DB_PASSWORD') ?: '';
-            \$db = getenv('DB_DATABASE') ?: 'fitness_app';
+            \$host = '${ACTUAL_DB_HOST}';
+            \$port = '${ACTUAL_DB_PORT}';
+            \$user = '${ACTUAL_DB_USER}';
+            \$pass = '${ACTUAL_DB_PASS}';
+            \$db = '${ACTUAL_DB_NAME}';
+            
+            echo \"Connecting to: \$host:\$port as \$user to database \$db\n\";
             
             try {
                 \$pdo = new PDO(\"mysql:host=\$host;port=\$port;dbname=\$db\", \$user, \$pass, [
@@ -121,10 +153,6 @@ if [ "$APP_ENV" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
     
     if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
         echo "WARNING: Could not connect to database after $MAX_RETRIES attempts"
-        echo "DB_HOST: ${DB_HOST:-not set}"
-        echo "DB_PORT: ${DB_PORT:-3306}"
-        echo "DB_DATABASE: ${DB_DATABASE:-not set}"
-        echo "DB_USERNAME: ${DB_USERNAME:-not set}"
         echo "Continuing anyway..."
     fi
 fi
