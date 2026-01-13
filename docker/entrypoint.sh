@@ -81,6 +81,54 @@ php artisan view:clear 2>/dev/null || true
 
 # 注意：不执行 cache:clear 和 config:cache，因为它们可能触发Redis连接
 
+# 测试数据库连接（生产环境）
+if [ "$APP_ENV" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
+    echo "Testing database connection..."
+    
+    # 等待数据库可用（最多30秒）
+    MAX_RETRIES=6
+    RETRY_COUNT=0
+    
+    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+        # 使用PHP测试数据库连接
+        if php -r "
+            \$host = getenv('DB_HOST') ?: 'localhost';
+            \$port = getenv('DB_PORT') ?: '3306';
+            \$user = getenv('DB_USERNAME') ?: 'root';
+            \$pass = getenv('DB_PASSWORD') ?: '';
+            \$db = getenv('DB_DATABASE') ?: 'fitness_app';
+            
+            try {
+                \$pdo = new PDO(\"mysql:host=\$host;port=\$port;dbname=\$db\", \$user, \$pass, [
+                    PDO::ATTR_TIMEOUT => 5,
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+                ]);
+                echo 'Database connection successful!';
+                exit(0);
+            } catch (PDOException \$e) {
+                echo 'Connection failed: ' . \$e->getMessage();
+                exit(1);
+            }
+        " 2>&1; then
+            echo "Database is ready!"
+            break
+        else
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Database not ready, retry $RETRY_COUNT/$MAX_RETRIES..."
+            sleep 5
+        fi
+    done
+    
+    if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+        echo "WARNING: Could not connect to database after $MAX_RETRIES attempts"
+        echo "DB_HOST: ${DB_HOST:-not set}"
+        echo "DB_PORT: ${DB_PORT:-3306}"
+        echo "DB_DATABASE: ${DB_DATABASE:-not set}"
+        echo "DB_USERNAME: ${DB_USERNAME:-not set}"
+        echo "Continuing anyway..."
+    fi
+fi
+
 echo "Laravel initialization complete, starting services..."
 
 # 启动 Supervisor
