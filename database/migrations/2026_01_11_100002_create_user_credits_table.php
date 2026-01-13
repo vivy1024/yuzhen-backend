@@ -18,6 +18,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // 如果表已存在，跳过创建
+        if (Schema::hasTable('user_credits')) {
+            return;
+        }
+        
         Schema::create('user_credits', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id')->unique()->comment('用户ID');
