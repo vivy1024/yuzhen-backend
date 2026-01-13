@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AiProxyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,20 +17,4 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-/*
-|--------------------------------------------------------------------------
-| AI代理路由（无/api前缀）
-|--------------------------------------------------------------------------
-| 前端请求: /ai/api/v1/chat/stream
-| 代理到: DAML-RAG服务
-*/
-Route::prefix('ai')->group(function () {
-    // 流式聊天接口
-    Route::post('/api/v1/chat/stream', [AiProxyController::class, 'streamChat']);
-    
-    // 非流式聊天接口
-    Route::post('/api/v1/chat', [AiProxyController::class, 'chat']);
-    
-    // 健康检查
-    Route::get('/api/health', [AiProxyController::class, 'health']);
-});
+// AI代理路由已移至 routes/api.php（使用api中间件组，避免CORS和CSRF问题）
