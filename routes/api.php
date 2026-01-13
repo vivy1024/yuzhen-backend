@@ -245,3 +245,23 @@ require __DIR__.'/modules/help.php';
 
 // AI代理模块已移至 routes/web.php（无/api前缀）
 // require __DIR__.'/modules/ai-proxy.php';
+
+/*
+|--------------------------------------------------------------------------
+| AI代理路由（直接在api.php中定义，避免CORS问题）
+|--------------------------------------------------------------------------
+| 前端请求: /api/ai/v1/chat/stream
+| 代理到: DAML-RAG服务
+| 
+| 注意：使用api中间件组，自动处理CORS，无需CSRF验证
+*/
+Route::prefix('ai')->group(function () {
+    // 流式聊天接口
+    Route::post('/v1/chat/stream', [\App\Http\Controllers\AiProxyController::class, 'streamChat']);
+    
+    // 非流式聊天接口
+    Route::post('/v1/chat', [\App\Http\Controllers\AiProxyController::class, 'chat']);
+    
+    // 健康检查
+    Route::get('/health', [\App\Http\Controllers\AiProxyController::class, 'health']);
+});
