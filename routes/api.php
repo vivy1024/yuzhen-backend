@@ -242,3 +242,6 @@ require __DIR__.'/modules/feedback.php';
 
 // Help模块（帮助中心）✅
 require __DIR__.'/modules/help.php';
+
+// AI代理模块（DAML-RAG代理）✅
+require __DIR__.'/modules/ai-proxy.php';
