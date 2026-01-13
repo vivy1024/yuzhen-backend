@@ -18,6 +18,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // 如果表已存在，跳过创建
+        if (Schema::hasTable('referrals')) {
+            return;
+        }
+        
         Schema::create('referrals', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('referrer_id')->comment('推荐人ID');
