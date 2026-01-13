@@ -154,6 +154,10 @@ if [ "$APP_ENV" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
     if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
         echo "WARNING: Could not connect to database after $MAX_RETRIES attempts"
         echo "Continuing anyway..."
+    else
+        # 数据库连接成功，运行迁移
+        echo "Running database migrations..."
+        php artisan migrate --force 2>&1 || echo "Migration completed (or no new migrations)"
     fi
 fi
 
