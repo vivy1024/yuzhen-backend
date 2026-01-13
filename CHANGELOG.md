@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.75.0
+**版本**: v2.76.0
 **更新日期**: 2026-01-13
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,27 @@
 ---
 
 ## 版本历史
+
+### v2.76.0 (2026-01-13) - 修复DAML-RAG服务内部地址配置 🐛
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**:
+AI代理无法连接DAML-RAG服务，错误信息：
+`Failed to connect to daml-rag-server.zeabur.internal port 8080`
+
+**根本原因**:
+`.env.production` 中的 `DAML_RAG_URL` 配置错误：
+- 错误配置：`http://daml-rag-server.zeabur.internal:8080`
+- 正确配置：`http://fitness_daml_rag.zeabur.internal:8001`
+
+**修复方案**:
+更新 `.env.production` 中的DAML-RAG服务地址为正确的Zeabur内部域名。
+
+**修改文件**:
+- `.env.production` - 修正DAML_RAG_URL和MCO_BASE_URL
+
+---
 
 ### v2.75.0 (2026-01-13) - 修复AI代理路由CORS问题 🐛
 
