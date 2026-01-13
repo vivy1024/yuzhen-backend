@@ -12,6 +12,6 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        'ai/*',  // AI代理路由，前端通过API调用，不需要CSRF验证
     ];
 }
