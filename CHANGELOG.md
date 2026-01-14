@@ -1,7 +1,7 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.76.0
-**更新日期**: 2026-01-13
+**版本**: v2.77.0
+**更新日期**: 2026-01-14
 **项目状态**: ✅ 生产运行
 
 ---
@@ -16,6 +16,45 @@
 ---
 
 ## 版本历史
+
+### v2.77.0 (2026-01-14) - 修复DAML-RAG服务内网域名配置 🐛
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**:
+生产环境健康检查失败，AI代理无法连接DAML-RAG服务，错误信息：
+`cURL error 28: Operation timed out after 10002 milliseconds for http://fitness_daml_rag.zeabur.internal:8001/api/health/`
+
+**根本原因**:
+`.env.production` 中的 `DAML_RAG_URL` 使用了错误的内网域名：
+- 错误配置：`http://fitness_daml_rag.zeabur.internal:8001`
+- 正确配置：`http://daml-rag-server.zeabur.internal:8001`
+
+Zeabur内网域名格式为 `<服务名>.zeabur.internal`，而DAML-RAG服务的实际服务名是 `daml-rag-server`（不是 `fitness_daml_rag`）。
+
+**修复方案**:
+更新 `.env.production` 中的DAML-RAG服务地址为正确的Zeabur内部域名。
+
+**修改文件**:
+- `.env.production` - 修正DAML_RAG_URL和MCO_BASE_URL
+
+**验证方法**:
+```bash
+# 推送到GitHub触发自动构建
+cd yuzhen-backend
+git add .env.production CHANGELOG.md
+git commit -m "fix(config): 修正DAML-RAG服务内网域名配置"
+git push origin main
+
+# 等待Zeabur构建完成后测试
+curl https://yuzhenapi.preview.aliyun-zeabur.cn/api/ai/health
+```
+
+**预期结果**:
+- 健康检查API返回DAML-RAG服务状态
+- AI聊天功能正常工作
+
+---
 
 ### v2.76.0 (2026-01-13) - 修复DAML-RAG服务内部地址配置 🐛
 
