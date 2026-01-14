@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.77.0
+**版本**: v2.78.0
 **更新日期**: 2026-01-14
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,77 @@
 ---
 
 ## 版本历史
+
+### v2.78.0 (2026-01-14) - 添加组件健康检查端点 ✨
+
+**变更类型**: ✨ 新功能
+
+**功能描述**:
+添加公开的组件健康检查端点 `/api/health/components`，提供各数据库和服务的详细连接状态。
+
+**新增端点**:
+- `GET /api/health/components` - 组件健康状态检查（公开访问）
+
+**检查的组件**:
+1. MySQL - 数据库连接状态和版本信息
+2. Redis - 缓存服务连接状态
+3. Neo4j - 图数据库连接状态
+4. Qdrant - 向量数据库连接状态
+5. DAML-RAG - AI服务连接状态
+
+**响应格式**:
+```json
+{
+  "code": 200,
+  "msg": "OK",
+  "data": {
+    "status": "healthy|degraded|unhealthy",
+    "timestamp": "2026-01-14T11:30:13.171104Z",
+    "components": {
+      "mysql": {
+        "status": "healthy",
+        "message": "MySQL连接正常",
+        "version": "8.0.33",
+        "response_time_ms": 5.23
+      },
+      "redis": {...},
+      "neo4j": {...},
+      "qdrant": {...},
+      "daml_rag": {...}
+    },
+    "summary": {
+      "total": 5,
+      "healthy": 5,
+      "unhealthy": 0
+    }
+  }
+}
+```
+
+**新增文件**:
+- `app/Http/Controllers/HealthCheckController.php` - 健康检查控制器
+
+**修改文件**:
+- `routes/api.php` - 添加健康检查路由
+
+**使用场景**:
+- 系统监控和告警
+- 故障诊断和排查
+- 生产环境健康验证
+- 外部监控工具集成
+
+**验证方法**:
+```bash
+# 本地测试
+curl http://localhost:8000/api/health/components
+
+# 生产环境测试
+curl https://yuzhenapi.preview.aliyun-zeabur.cn/api/health/components
+```
+
+**相关需求**: Requirements 6.2, 6.3, 6.4
+
+---
 
 ### v2.77.0 (2026-01-14) - 修复DAML-RAG服务内网域名配置 🐛
 
