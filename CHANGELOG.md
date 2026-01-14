@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.78.0
+**版本**: v2.79.0
 **更新日期**: 2026-01-14
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,66 @@
 ---
 
 ## 版本历史
+
+### v2.79.0 (2026-01-14) - 添加数据库连接配置 🔧
+
+**变更类型**: 🔧 配置更新
+
+**功能描述**:
+在.env.production中添加Redis、Neo4j和Qdrant的连接配置，解决组件健康检查中的连接失败问题。
+
+**新增配置**:
+
+1. **Redis配置**
+   ```env
+   REDIS_HOST=${FITNESS_REDIS_HOST:-fitness-redis.zeabur.internal}
+   REDIS_PORT=6379
+   REDIS_PASSWORD=${FITNESS_REDIS_PASSWORD}
+   ```
+
+2. **Neo4j配置**
+   ```env
+   NEO4J_URL=bolt://182.92.78.183:32633
+   NEO4J_USERNAME=neo4j
+   NEO4J_PASSWORD=build_body_2024
+   ```
+   - 注意：使用公网端口，因为Zeabur阿里云区域不支持Bolt协议的内网连接
+
+3. **Qdrant配置**
+   ```env
+   QDRANT_URL=http://${FITNESS_QDRANT_HOST:-fitness_qdrant.zeabur.internal}:6333
+   ```
+
+**配置说明**:
+- Redis和Qdrant使用Zeabur自动生成的环境变量（`FITNESS_*_HOST`）
+- 提供默认值作为fallback（使用 `:-` 语法）
+- Neo4j必须使用公网端口（Zeabur限制）
+
+**修改文件**:
+- `.env.production` - 添加数据库连接配置
+
+**影响范围**:
+- 组件健康检查端点 `/api/health/components`
+- 所有依赖这些数据库的功能
+
+**验证方法**:
+```bash
+# 推送到GitHub触发自动构建
+cd yuzhen-backend
+git add .env.production CHANGELOG.md
+git commit -m "feat(config): 添加Redis/Neo4j/Qdrant连接配置"
+git push origin main
+
+# 等待Zeabur构建完成后测试
+curl https://yuzhenapi.preview.aliyun-zeabur.cn/api/health/components
+```
+
+**预期结果**:
+- Redis状态从 `unhealthy` 变为 `healthy`
+- Neo4j状态从 `unknown` 变为 `healthy`
+- Qdrant状态从 `unknown` 变为 `healthy`
+
+---
 
 ### v2.78.0 (2026-01-14) - 添加组件健康检查端点 ✨
 
