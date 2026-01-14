@@ -17,17 +17,8 @@ use Illuminate\Support\Facades\DB;
 | 健康检查
 |--------------------------------------------------------------------------
 */
-Route::get('/health', function () {
-    return response()->json([
-        'code' => 200,
-        'msg' => 'OK',
-        'data' => [
-            'status' => 'healthy',
-            'version' => '2.0.0',
-            'timestamp' => now()->toISOString(),
-        ]
-    ]);
-});
+Route::get('/health', [\App\Http\Controllers\HealthCheckController::class, 'index']);
+Route::get('/health/components', [\App\Http\Controllers\HealthCheckController::class, 'components']);
 
 /*
 |--------------------------------------------------------------------------
