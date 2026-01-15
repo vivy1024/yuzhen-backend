@@ -49,9 +49,13 @@ class ExerciseRepository extends BaseRepository implements ExerciseRepositoryInt
             });
         }
         
-        // ✅ 肌群筛选（使用中文字段）
+        // ✅ 肌群筛选（使用标准数组字段）
         if (!empty($filters['muscle'])) {
-            $query->where('primary_muscle_zh', 'like', "%{$filters['muscle']}%");
+            $query->where(function($q) use ($filters) {
+                // 使用 JSON_CONTAINS 查询数组字段
+                $q->whereRaw("JSON_CONTAINS(muscles_primary_zh, ?)", [json_encode($filters['muscle'])])
+                  ->orWhereRaw("JSON_SEARCH(muscles_primary_zh, 'one', ?) IS NOT NULL", ["%{$filters['muscle']}%"]);
+            });
         }
         
         // ✅ 器械筛选（使用中文字段，支持多选）

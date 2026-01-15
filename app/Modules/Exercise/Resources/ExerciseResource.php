@@ -31,9 +31,13 @@ class ExerciseResource extends JsonResource
                 $this->description_zh ?? $this->description_en
             ),
             'primary_muscle' => $this->primary_muscle_en,
-            'primary_muscle_zh' => $this->primary_muscle_zh, // 修复：使用正确的字段名
+            'primary_muscle_zh' => $this->primary_muscle_zh,
+            
+            // ✅ 标准数组字段（三端统一）
+            'muscles_primary' => $this->muscles_primary_zh ?? [$this->primary_muscle_zh],
+            'muscles_secondary' => $this->muscles_secondary_zh ?? [],
 
-            // 次要肌肉（Model已cast为array）
+            // 次要肌肉（兼容旧字段）
             'secondary_muscles' => $this->all_muscles_zh ?? [],
 
             'equipment' => $this->equipment_en,
