@@ -1,7 +1,7 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.79.0
-**更新日期**: 2026-01-14
+**版本**: v2.80.0
+**更新日期**: 2026-01-15
 **项目状态**: ✅ 生产运行
 
 ---
@@ -16,6 +16,74 @@
 ---
 
 ## 版本历史
+
+### v2.80.0 (2026-01-15) - 统一MySQL肌肉字段（三端数据库统一） 🔧
+
+**变更类型**: 🔧 数据结构优化 + 📚 代码重构
+
+**问题背景**:
+在生产环境验证中发现MySQL的肌肉字段与文件系统、Neo4j、Qdrant不一致：
+- 文件系统/Neo4j/Qdrant：使用 `muscles_primary_zh` (数组)
+- MySQL：使用 `primary_muscle_zh` (字符串) + `muscles_primary` (数组，命名不规范)
+
+**修复内容**:
+
+1. **数据迁移**
+   - 创建迁移：`2026_01_15_000001_migrate_muscle_fields_to_standard.php`
+   - 将 `primary_muscle_zh` (字符串) → `muscles_primary_zh` (数组)
+   - 将 `primary_muscle_en` (字符串) → `muscles_primary_en` (数组)
+   - 填充空的 `all_muscles_zh` 字段
+
+2. **Repository更新**
+   - 更新 `ExerciseRepository::paginate()` 使用 `muscles_primary_zh` 数组字段
+   - 使用 `JSON_CONTAINS` 和 `JSON_SEARCH` 进行数组查询
+   - 支持精确匹配和模糊匹配
+
+3. **Model更新**
+   - 更新 `Exercise::scopeByMuscle()` 使用标准数组字段
+   - 支持中英文肌肉名称查询
+
+4. **Resource更新**
+   - `ExerciseResource` 添加标准字段 `muscles_primary` 和 `muscles_secondary`
+   - 保持向后兼容（仍返回旧字段）
+
+5. **Artisan命令**
+   - 创建 `exercises:migrate-muscle-fields` 命令
+   - 支持 `--dry-run` 预览模式
+   - 支持 `--force` 跳过确认
+   - 提供详细的统计和验证信息
+
+**统一后的字段结构**:
+| 字段类型 | 字段名 | 类型 | 说明 |
+|---------|--------|------|------|
+| 主要肌肉 | `muscles_primary_zh/en` | JSON数组 | ✅ 标准字段 |
+| 次要肌肉 | `muscles_secondary_zh/en` | JSON数组 | ✅ 标准字段 |
+| 所有肌肉 | `all_muscles_zh/en` | JSON数组 | ✅ 标准字段 |
+| 主要肌肉（旧） | `primary_muscle_zh/en` | 字符串 | ⚠️ 保留兼容 |
+
+**部署步骤**:
+```bash
+# 1. 推送代码到GitHub
+git add .
+git commit -m "refactor(data): 统一MySQL肌肉字段（三端数据库统一）"
+git push origin main
+
+# 2. Zeabur自动构建部署
+
+# 3. 在生产环境执行数据迁移
+php artisan exercises:migrate-muscle-fields --dry-run  # 预览
+php artisan exercises:migrate-muscle-fields            # 执行
+```
+
+**影响范围**:
+- ✅ API响应格式保持兼容（添加新字段，保留旧字段）
+- ✅ 筛选功能升级（支持数组查询）
+- ✅ 三端数据库字段完全统一
+
+**相关文档**:
+- 字段不一致性分析：`.kiro/specs/production-domain-verification/field-inconsistency-analysis.md`
+
+---
 
 ### v2.79.0 (2026-01-14) - 添加数据库连接配置 🔧
 

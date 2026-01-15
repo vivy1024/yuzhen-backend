@@ -129,8 +129,13 @@ class Exercise extends Model
 
     public function scopeByMuscle(Builder $query, string $muscle): Builder
     {
-        return $query->where('primary_muscle_zh', 'like', "%{$muscle}%")
-                     ->orWhere('primary_muscle_en', 'like', "%{$muscle}%");
+        return $query->where(function($q) use ($muscle) {
+            // 使用标准数组字段查询
+            $q->whereRaw("JSON_CONTAINS(muscles_primary_zh, ?)", [json_encode($muscle)])
+              ->orWhereRaw("JSON_SEARCH(muscles_primary_zh, 'one', ?) IS NOT NULL", ["%{$muscle}%"])
+              ->orWhereRaw("JSON_CONTAINS(muscles_primary_en, ?)", [json_encode($muscle)])
+              ->orWhereRaw("JSON_SEARCH(muscles_primary_en, 'one', ?) IS NOT NULL", ["%{$muscle}%"]);
+        });
     }
 
     public function scopeByEquipment(Builder $query, string $equipment): Builder
