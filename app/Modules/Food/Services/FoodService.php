@@ -58,13 +58,27 @@ class FoodService
     }
 
     /**
-     * 获取分类列表（临时禁用缓存）
+     * 获取分类列表（带缓存，不缓存空结果）
      */
     public function getCategories(): array
     {
-        // 临时禁用缓存，直接从数据库获取数据
-        // TODO: 调查生产环境缓存问题后恢复缓存
-        return $this->repository->getCategories();
+        $cacheKey = 'foods:categories';
+        
+        // 尝试从缓存获取
+        $cached = Cache::get($cacheKey);
+        if ($cached && !empty($cached)) {
+            return $cached;
+        }
+        
+        // 从数据库获取
+        $categories = $this->repository->getCategories();
+        
+        // ✅ 只有非空结果才缓存（24小时）
+        if (!empty($categories)) {
+            Cache::put($cacheKey, $categories, 86400);
+        }
+        
+        return $categories;
     }
 
     /**
@@ -80,16 +94,30 @@ class FoodService
     }
 
     /**
-     * 获取筛选选项
+     * 获取筛选选项（带缓存，不缓存空结果）
      */
     public function getFilterOptions(): array
     {
-        return Cache::remember('foods:filter_options', 86400, function () {
-            return [
-                'categories' => $this->repository->getCategories(),
-                'subcategories' => $this->repository->getSubcategories(),
-            ];
-        });
+        $cacheKey = 'foods:filter_options';
+        
+        // 尝试从缓存获取
+        $cached = Cache::get($cacheKey);
+        if ($cached && !empty($cached['categories'])) {
+            return $cached;
+        }
+        
+        // 从数据库获取
+        $options = [
+            'categories' => $this->repository->getCategories(),
+            'subcategories' => $this->repository->getSubcategories(),
+        ];
+        
+        // ✅ 只有非空结果才缓存（24小时）
+        if (!empty($options['categories'])) {
+            Cache::put($cacheKey, $options, 86400);
+        }
+        
+        return $options;
     }
 
     /**
