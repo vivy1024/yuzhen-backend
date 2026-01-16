@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.83.0
+**版本**: v2.84.0
 **更新日期**: 2026-01-16
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,35 @@
 ---
 
 ## 版本历史
+
+### v2.84.0 (2026-01-16) - 更新nginx CORS配置支持所有正式域名 🐛
+
+**变更类型**: 🐛 Bug修复
+
+**问题分析**:
+- Zeabur Config Editor配置的nginx文件未被正确应用
+- 需要在Dockerfile中直接配置nginx以确保CORS头正确返回
+
+**解决方案**:
+1. **更新docker/nginx/default.conf**
+   - 添加所有正式域名到CORS白名单
+   - 包含：`app.yuzhen-fitness.cn`, `yuzhen-fitness.cn`, `www.yuzhen-fitness.cn`
+   - 保留测试域名用于开发调试
+   - 添加 `Access-Control-Max-Age` 头（86400秒）
+
+**CORS域名白名单**:
+```
+- localhost:9000 (本地开发)
+- app.yuzhen-fitness.cn (应用PWA)
+- yuzhen-fitness.cn (官网)
+- www.yuzhen-fitness.cn (官网www)
+- yuzhen.preview.aliyun-zeabur.cn (测试域名)
+- yuzhenapi.preview.aliyun-zeabur.cn (测试API)
+```
+
+**影响范围**: 生产环境CORS配置
+
+---
 
 ### v2.83.0 (2026-01-16) - 添加自定义nginx配置解决Zeabur CORS问题 🐛
 
