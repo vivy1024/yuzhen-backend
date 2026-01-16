@@ -1297,7 +1297,7 @@ curl http://fitness_daml_rag.zeabur.internal:8001/api/health
 
 ### 访问方式
 
-**phpMyAdmin URL**: https://phpmyadmin.preview.aliyun-zeabur.cn
+**phpMyAdmin URL**: https://phpmyadmin.yuzhen-fitness.cn
 
 ### 登录信息
 
@@ -1311,7 +1311,7 @@ curl http://fitness_daml_rag.zeabur.internal:8001/api/health
 ### 登录步骤
 
 1. **访问phpMyAdmin**
-   - 打开浏览器访问：https://phpmyadmin.preview.aliyun-zeabur.cn
+   - 打开浏览器访问：https://phpmyadmin.yuzhen-fitness.cn
    - 等待页面加载完成
 
 2. **填写登录信息**
