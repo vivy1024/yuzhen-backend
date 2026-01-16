@@ -58,13 +58,13 @@ class FoodService
     }
 
     /**
-     * 获取分类列表（带缓存）
+     * 获取分类列表（临时禁用缓存）
      */
     public function getCategories(): array
     {
-        return Cache::remember('foods:categories', 86400, function () {
-            return $this->repository->getCategories();
-        });
+        // 临时禁用缓存，直接从数据库获取数据
+        // TODO: 调查生产环境缓存问题后恢复缓存
+        return $this->repository->getCategories();
     }
 
     /**
