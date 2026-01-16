@@ -16,7 +16,7 @@ class Kernel extends HttpKernel
     protected $middleware = [
         // \App\Http\Middleware\TrustHosts::class,
         \App\Http\Middleware\TrustProxies::class,
-        // \Illuminate\Http\Middleware\HandleCors::class, // ❌ 暂时禁用，避免与nginx冲突
+        \Illuminate\Http\Middleware\HandleCors::class, // ✅ 启用CORS中间件（Zeabur生产环境需要）
         \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
         \App\Http\Middleware\TrimStrings::class,
