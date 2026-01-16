@@ -1,14 +1,14 @@
 # Yuzhen Backend Zeabur 部署指南
 
-**版本**: v2.0.0  
-**更新日期**: 2026-01-16  
+**版本**: v3.0.0  
+**更新日期**: 2026-01-17  
 **状态**: ✅ 生产环境运行中
 
 ---
 
 ## 📋 概述
 
-本文档提供 Yuzhen Backend（Laravel + PHP-FPM + Nginx）在 Zeabur 平台的完整部署指南。
+本文档提供 Yuzhen Backend（Laravel + PHP-FPM + Nginx）在 Zeabur 平台的完整部署指南，包括GitHub同步部署、环境变量配置、数据库连接、CORS问题解决、Redis配置、自动迁移机制等核心内容。
 
 ### 当前部署状态
 
@@ -16,6 +16,7 @@
 - **部署方式**: GitHub同步自动构建
 - **域名**: api.yuzhen-fitness.cn
 - **服务名**: fitness_php_v2
+- **GitHub仓库**: vivy1024/yuzhen-backend
 
 ### 架构说明
 
@@ -24,6 +25,7 @@
 - 集成 Nginx + PHP-FPM 到单一容器
 - 端口：8000（对外服务）
 - 自动数据库迁移和健康检查
+- 支持流式响应（AI聊天）
 
 **旧架构**（双容器方案，已废弃）：
 - PHP-FPM 服务（端口9000，内部）
@@ -80,6 +82,9 @@ QUEUE_CONNECTION=sync
 FRONTEND_URL=https://app.yuzhen-fitness.cn
 CORS_ALLOWED_ORIGINS=https://app.yuzhen-fitness.cn,https://yuzhen-fitness.cn
 
+# DAML-RAG服务连接
+DAML_RAG_URL=http://fitness_daml_rag.zeabur.internal:8001
+
 # 邮件配置
 MAIL_MAILER=smtp
 MAIL_HOST=smtp.qq.com
@@ -96,6 +101,11 @@ MAIL_FROM_NAME="玉珍健身"
 - 不要硬编码数据库地址（如 `xxx.zeabur.internal`）
 - `CACHE_DRIVER=file` 避免Redis连接问题
 - `CORS_ALLOWED_ORIGINS` 必须包含前端域名
+- 敏感信息（如密码、密钥）通过Zeabur环境变量覆盖，不要提交到Git
+
+**环境变量配置位置**：
+1. **代码仓库**：`.env.production` 文件（不含敏感信息）
+2. **Zeabur控制台**：服务 → Variable（覆盖敏感信息）
 
 #### 4. 配置端口
 
@@ -228,6 +238,8 @@ FRONTEND_URL=https://your-frontend-domain.com
 
 ### 1. 数据库连接配置
 
+#### 1.1 环境变量占位符
+
 **核心原则**：使用Zeabur环境变量占位符，避免硬编码
 
 **✅ 正确配置**：
@@ -241,17 +253,105 @@ DB_PASSWORD=${FITNESS_MYSQL_PASSWORD}
 **❌ 错误配置**：
 ```bash
 DB_HOST=fitness_mysql.zeabur.internal  # 硬编码，会导致连接失败
+DB_HOST=182.92.78.183  # 硬编码IP，不推荐
 ```
 
-**连接测试机制**：
-- `entrypoint.sh` 会在启动时测试数据库连接
-- 最多重试30次，每次等待2秒
-- 连接成功后自动执行数据库迁移
+**为什么使用占位符**：
+- Zeabur会自动注入正确的连接信息
+- 支持内网域名和公网端口自动切换
+- 避免手动维护连接信息
+- 提高配置的可移植性
 
-**数据库迁移**：
-- 启动时自动执行 `php artisan migrate --force`
-- 确保数据库结构与代码同步
+#### 1.2 连接测试机制
+
+**entrypoint.sh启动流程**：
+```bash
+#!/bin/bash
+set -e
+
+echo "等待数据库连接..."
+count=0
+until php artisan db:show 2>/dev/null; do
+    echo "等待数据库连接... ($count/30)"
+    sleep 2
+    count=$((count + 1))
+    if [ $count -gt 30 ]; then
+        echo "❌ 数据库连接超时"
+        exit 1
+    fi
+done
+
+echo "✅ 数据库连接成功"
+```
+
+**连接参数**：
+- 最多重试：30次
+- 重试间隔：2秒
+- 总超时时间：60秒
+- 测试命令：`php artisan db:show`
+
+**连接失败排查**：
+1. 检查数据库服务是否运行（Zeabur控制台）
+2. 验证环境变量是否正确注入
+3. 查看启动日志（服务 → Logs）
+4. 确认数据库用户权限
+
+#### 1.3 内网域名 vs 公网端口
+
+**Zeabur服务间通信**：
+
+| 协议 | 内网支持 | 推荐方式 | 示例 |
+|------|---------|---------|------|
+| MySQL | ✅ 支持 | 内网域名 | `fitness_mysql.zeabur.internal:3306` |
+| Redis | ✅ 支持 | 内网域名 | `fitness-redis.zeabur.internal:6379` |
+| HTTP/HTTPS | ✅ 支持 | 内网域名 | `fitness_daml_rag.zeabur.internal:8001` |
+| Neo4j Bolt | ❌ 不支持 | 公网端口 | `182.92.78.183:32633` |
+| Qdrant gRPC | ❌ 不支持 | 公网端口 | `182.92.78.183:32091` |
+
+**配置建议**：
+- 标准协议（MySQL、Redis、HTTP）：优先使用内网域名
+- 自定义协议（Bolt、gRPC）：必须使用公网端口
+- 使用Zeabur占位符自动处理
+
+#### 1.4 数据库迁移
+
+**自动迁移机制**：
+```bash
+# entrypoint.sh中的迁移逻辑
+echo "执行数据库迁移..."
+php artisan migrate --force
+
+if [ $? -eq 0 ]; then
+    echo "✅ 数据库迁移成功"
+else
+    echo "❌ 数据库迁移失败"
+    exit 1
+fi
+```
+
+**迁移特点**：
+- 启动时自动执行
+- 只运行未执行的迁移
 - 不会删除现有数据
+- 失败时容器退出
+
+**手动执行迁移**：
+```bash
+# 在Zeabur控制台 → 服务 → Terminal
+php artisan migrate --force
+
+# 查看迁移状态
+php artisan migrate:status
+
+# 回滚最后一次迁移（谨慎使用）
+php artisan migrate:rollback --step=1
+```
+
+**迁移失败排查**：
+1. 检查迁移文件语法
+2. 验证数据库用户权限（需要CREATE、ALTER权限）
+3. 查看详细错误日志
+4. 确认migrations表存在
 
 ---
 
@@ -317,23 +417,46 @@ curl -X OPTIONS https://api.yuzhen-fitness.cn/api/health \
 
 ### 3. Redis连接配置
 
-**问题描述**：
-- EmailService使用Redis::connection()直接连接失败
-- Zeabur环境下Redis连接不稳定
+#### 3.1 问题描述
 
-**解决方案**：
-
-#### 方案1：使用Cache Facade（推荐）
-
-```php
-// ❌ 错误：直接使用Redis
-Redis::connection()->set($key, $code);
-
-// ✅ 正确：使用Cache Facade
-Cache::put($key, $code, 300);
+**常见错误**：
+```
+Connection refused [tcp://redis:6379]
+RedisException: Connection to Redis failed
 ```
 
-#### 方案2：使用file缓存驱动
+**原因分析**：
+- 直接使用 `Redis::connection()` 在Zeabur环境下不稳定
+- Redis服务未启动或连接信息错误
+- 网络延迟导致连接超时
+
+#### 3.2 解决方案
+
+**方案1：使用Cache Facade（推荐）**
+
+```php
+// ❌ 错误：直接使用Redis Facade
+use Illuminate\Support\Facades\Redis;
+
+Redis::connection()->set($key, $code);
+Redis::connection()->expire($key, 300);
+$value = Redis::connection()->get($key);
+
+// ✅ 正确：使用Cache Facade
+use Illuminate\Support\Facades\Cache;
+
+Cache::put($key, $code, 300);  // 自动处理过期时间
+$value = Cache::get($key);
+Cache::forget($key);  // 删除缓存
+```
+
+**优点**：
+- 自动处理连接池
+- 支持多种缓存驱动（redis、file、memcached）
+- 统一的API接口
+- 更好的错误处理
+
+**方案2：使用file缓存驱动（生产环境推荐）**
 
 在 `.env.production` 中：
 ```bash
@@ -345,39 +468,244 @@ QUEUE_CONNECTION=sync
 **优点**：
 - 避免Redis连接问题
 - 简化部署配置
+- 无需额外服务
 - 适合中小规模应用
+
+**缺点**：
+- 性能略低于Redis
+- 不支持分布式缓存
+- 文件系统IO开销
+
+**方案3：配置Redis连接（如需使用Redis）**
+
+```bash
+# .env.production
+REDIS_CLIENT=phpredis  # 或 predis
+REDIS_HOST=${FITNESS_REDIS_HOST}
+REDIS_PORT=${FITNESS_REDIS_PORT}
+REDIS_PASSWORD=null
+REDIS_DB=0
+REDIS_CACHE_DB=1
+```
+
+**config/database.php**：
+```php
+'redis' => [
+    'client' => env('REDIS_CLIENT', 'phpredis'),
+    'options' => [
+        'cluster' => env('REDIS_CLUSTER', 'redis'),
+        'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
+    ],
+    'default' => [
+        'url' => env('REDIS_URL'),
+        'host' => env('REDIS_HOST', '127.0.0.1'),
+        'password' => env('REDIS_PASSWORD'),
+        'port' => env('REDIS_PORT', '6379'),
+        'database' => env('REDIS_DB', '0'),
+        'read_timeout' => 60,
+        'timeout' => 5,
+    ],
+],
+```
+
+#### 3.3 性能对比
+
+| 缓存驱动 | 读取速度 | 写入速度 | 分布式 | 持久化 | 推荐场景 |
+|---------|---------|---------|--------|--------|---------|
+| Redis | 极快 | 极快 | ✅ | ✅ | 高并发、分布式 |
+| File | 快 | 中 | ❌ | ✅ | 单机、中小规模 |
+| Array | 极快 | 极快 | ❌ | ❌ | 测试环境 |
+
+#### 3.4 验证Redis连接
+
+```bash
+# 在Zeabur控制台 → 服务 → Terminal
+php artisan tinker
+
+# 测试Redis连接
+>>> Cache::put('test_key', 'test_value', 60);
+>>> Cache::get('test_key');
+=> "test_value"
+
+# 测试Redis Facade（如果使用）
+>>> Redis::ping();
+=> "PONG"
+```
 
 ---
 
 ### 4. 自动数据库迁移
 
-**启动流程**：
-1. 容器启动
-2. 等待数据库连接（最多60秒）
-3. 执行 `php artisan migrate --force`
-4. 启动Nginx和PHP-FPM
+#### 4.1 启动流程
 
-**entrypoint.sh关键代码**：
+**完整启动流程**：
+```
+1. 容器启动
+   ↓
+2. 加载环境变量（.env.production）
+   ↓
+3. 等待数据库连接（最多60秒）
+   ↓
+4. 执行数据库迁移（php artisan migrate --force）
+   ↓
+5. 启动PHP-FPM（后台）
+   ↓
+6. 启动Nginx（前台）
+```
+
+#### 4.2 entrypoint.sh完整代码
+
 ```bash
-# 等待数据库连接
+#!/bin/bash
+set -e
+
+echo "=========================================="
+echo "Yuzhen Backend 启动中..."
+echo "=========================================="
+
+# 1. 等待数据库连接
+echo "等待数据库连接..."
+count=0
 until php artisan db:show 2>/dev/null; do
     echo "等待数据库连接... ($count/30)"
     sleep 2
     count=$((count + 1))
     if [ $count -gt 30 ]; then
-        echo "数据库连接超时"
+        echo "❌ 数据库连接超时"
         exit 1
     fi
 done
+echo "✅ 数据库连接成功"
 
-# 执行数据库迁移
+# 2. 执行数据库迁移
+echo "执行数据库迁移..."
 php artisan migrate --force
+
+if [ $? -eq 0 ]; then
+    echo "✅ 数据库迁移成功"
+else
+    echo "❌ 数据库迁移失败"
+    exit 1
+fi
+
+# 3. 清理缓存（可选）
+echo "清理应用缓存..."
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
+
+# 4. 优化性能（生产环境）
+if [ "$APP_ENV" = "production" ]; then
+    echo "优化生产环境..."
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+fi
+
+# 5. 启动PHP-FPM（后台）
+echo "启动PHP-FPM..."
+php-fpm -D
+
+# 6. 启动Nginx（前台）
+echo "启动Nginx..."
+echo "=========================================="
+echo "✅ Yuzhen Backend 启动完成"
+echo "=========================================="
+nginx -g 'daemon off;'
 ```
 
-**注意事项**：
-- 不会删除现有数据
-- 只执行未运行的迁移
-- 失败时容器会退出
+#### 4.3 迁移机制说明
+
+**迁移特点**：
+- **增量执行**：只运行未执行的迁移
+- **幂等性**：多次执行不会重复创建
+- **事务保护**：失败时自动回滚
+- **版本追踪**：记录在 `migrations` 表
+
+**迁移文件示例**：
+```php
+// database/migrations/2024_01_01_000000_create_users_table.php
+public function up()
+{
+    Schema::create('users', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->string('email')->unique();
+        $table->timestamps();
+    });
+}
+
+public function down()
+{
+    Schema::dropIfExists('users');
+}
+```
+
+**迁移命令**：
+```bash
+# 执行所有未运行的迁移
+php artisan migrate --force
+
+# 查看迁移状态
+php artisan migrate:status
+
+# 回滚最后一批迁移
+php artisan migrate:rollback
+
+# 回滚所有迁移
+php artisan migrate:reset
+
+# 回滚并重新运行所有迁移（危险！）
+php artisan migrate:refresh --force
+```
+
+#### 4.4 注意事项
+
+**✅ 安全操作**：
+- `migrate`：只添加新表和字段
+- `migrate:status`：查看状态
+- `migrate:rollback --step=1`：回滚一步
+
+**❌ 危险操作**（生产环境禁止）：
+- `migrate:fresh`：删除所有表重建
+- `migrate:refresh`：回滚并重新运行
+- `migrate:reset`：回滚所有迁移
+- `db:wipe`：清空数据库
+
+**最佳实践**：
+1. 本地测试迁移文件
+2. 生产环境部署前备份数据库
+3. 使用 `--pretend` 预览SQL
+4. 避免修改已部署的迁移文件
+5. 使用新迁移文件修改表结构
+
+#### 4.5 迁移失败排查
+
+**常见错误1：表已存在**
+```
+SQLSTATE[42S01]: Base table or view already exists
+```
+**解决方案**：
+- 检查 `migrations` 表记录
+- 手动删除重复的迁移记录
+- 或使用 `Schema::dropIfExists()` 先删除表
+
+**常见错误2：字段已存在**
+```
+SQLSTATE[42S21]: Column already exists
+```
+**解决方案**：
+- 使用 `Schema::hasColumn()` 检查
+- 或使用 `dropColumn()` 先删除字段
+
+**常见错误3：权限不足**
+```
+SQLSTATE[42000]: Access denied for user
+```
+**解决方案**：
+- 确认数据库用户有 CREATE、ALTER 权限
+- 检查 `DB_USERNAME` 和 `DB_PASSWORD`
 
 ---
 
@@ -573,14 +901,408 @@ Migration table not found
 
 ---
 
+## 🚨 常见问题排查
+
+### 问题1：数据库连接失败
+
+**错误信息**：
+```
+SQLSTATE[HY000] [2002] Connection refused
+SQLSTATE[HY000] [2002] php_network_getaddresses: getaddrinfo failed
+```
+
+**原因分析**：
+1. 数据库服务未启动
+2. 数据库连接配置错误
+3. 使用了硬编码的内网地址
+4. 环境变量未正确注入
+
+**解决方案**：
+
+**步骤1：检查数据库服务状态**
+- 登录Zeabur控制台
+- 查看 `fitness_mysql` 服务状态
+- 确认服务为 Running 状态
+
+**步骤2：验证环境变量配置**
+```bash
+# 在Zeabur控制台 → 服务 → Terminal
+echo $DB_HOST
+echo $DB_PORT
+echo $DB_USERNAME
+
+# 应该显示实际的连接信息，而不是占位符
+```
+
+**步骤3：测试数据库连接**
+```bash
+php artisan db:show
+# 应该显示数据库连接信息
+
+php artisan tinker
+>>> DB::connection()->getPdo();
+# 应该返回PDO对象
+```
+
+**步骤4：查看启动日志**
+- Zeabur控制台 → 服务 → Logs
+- 查找 "等待数据库连接" 相关日志
+- 确认连接测试通过
+
+**步骤5：修正配置**
+```bash
+# ✅ 正确配置
+DB_HOST=${FITNESS_MYSQL_HOST}
+DB_PORT=${FITNESS_MYSQL_PORT}
+
+# ❌ 错误配置
+DB_HOST=fitness_mysql.zeabur.internal  # 硬编码
+DB_HOST=localhost  # 错误的地址
+```
+
+---
+
+### 问题2：CORS跨域错误
+
+**错误信息**：
+```
+Access to XMLHttpRequest at 'https://api.yuzhen-fitness.cn/api/chat' 
+from origin 'https://app.yuzhen-fitness.cn' has been blocked by CORS policy
+```
+
+**原因分析**：
+1. CORS中间件未生效
+2. OPTIONS预检请求返回错误状态码
+3. Nginx配置覆盖了Laravel的CORS头
+4. CORS_ALLOWED_ORIGINS配置错误
+
+**解决方案**：
+
+**步骤1：确认ForceCors中间件已注册**
+
+`app/Http/Middleware/ForceCors.php`：
+```php
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class ForceCors
+{
+    public function handle(Request $request, Closure $next): Response
+    {
+        // 处理OPTIONS预检请求
+        if ($request->isMethod('OPTIONS')) {
+            return response('', 204)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+        }
+
+        $response = $next($request);
+        
+        // 添加CORS头到所有响应
+        return $response
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    }
+}
+```
+
+`bootstrap/app.php`：
+```php
+->withMiddleware(function (Middleware $middleware) {
+    $middleware->append(ForceCors::class);
+})
+```
+
+**步骤2：验证OPTIONS请求**
+```bash
+curl -X OPTIONS https://api.yuzhen-fitness.cn/api/health \
+  -H "Origin: https://app.yuzhen-fitness.cn" \
+  -H "Access-Control-Request-Method: POST" \
+  -v
+
+# 应该返回：
+# HTTP/1.1 204 No Content
+# Access-Control-Allow-Origin: *
+# Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+```
+
+**步骤3：检查环境变量**
+```bash
+CORS_ALLOWED_ORIGINS=https://app.yuzhen-fitness.cn,https://yuzhen-fitness.cn
+FRONTEND_URL=https://app.yuzhen-fitness.cn
+```
+
+**步骤4：禁用Laravel默认CORS（如果冲突）**
+
+`config/cors.php`：
+```php
+return [
+    'paths' => [],  // 禁用默认CORS
+    'allowed_methods' => ['*'],
+    'allowed_origins' => ['*'],
+    'allowed_origins_patterns' => [],
+    'allowed_headers' => ['*'],
+    'exposed_headers' => [],
+    'max_age' => 0,
+    'supports_credentials' => false,
+];
+```
+
+---
+
+### 问题3：Redis连接失败
+
+**错误信息**：
+```
+Connection refused [tcp://redis:6379]
+RedisException: Connection to Redis failed
+```
+
+**原因分析**：
+1. Redis服务未启动
+2. 使用了不兼容的Redis方法
+3. 连接超时或网络问题
+
+**解决方案**：
+
+**方案1：改用Cache Facade（推荐）**
+```php
+// ❌ 错误
+use Illuminate\Support\Facades\Redis;
+Redis::connection()->set($key, $value);
+
+// ✅ 正确
+use Illuminate\Support\Facades\Cache;
+Cache::put($key, $value, $ttl);
+```
+
+**方案2：使用file缓存驱动**
+```bash
+# .env.production
+CACHE_DRIVER=file
+SESSION_DRIVER=file
+```
+
+**方案3：检查Redis服务**
+```bash
+# 在Zeabur控制台查看Redis服务状态
+# 确认 fitness-redis 服务为 Running
+
+# 测试连接
+php artisan tinker
+>>> Cache::put('test', 'value', 60);
+>>> Cache::get('test');
+```
+
+---
+
+### 问题4：502 Bad Gateway
+
+**错误信息**：
+```
+502 Bad Gateway
+nginx/1.24.0
+```
+
+**原因分析**：
+1. PHP-FPM进程未启动
+2. PHP-FPM进程崩溃
+3. Nginx无法连接到PHP-FPM
+4. 内存不足导致进程被杀
+
+**解决方案**：
+
+**步骤1：检查进程状态**
+```bash
+# 在Zeabur控制台 → 服务 → Terminal
+ps aux | grep php-fpm
+ps aux | grep nginx
+
+# 应该看到多个php-fpm进程和nginx进程
+```
+
+**步骤2：查看错误日志**
+```bash
+# PHP-FPM日志
+tail -f /var/log/php-fpm/error.log
+
+# Nginx日志
+tail -f /var/log/nginx/error.log
+```
+
+**步骤3：重启服务**
+- Zeabur控制台 → 服务 → Overview → Restart
+
+**步骤4：检查内存使用**
+```bash
+free -h
+# 确认有足够的可用内存
+```
+
+---
+
+### 问题5：数据库迁移失败
+
+**错误信息**：
+```
+SQLSTATE[42S01]: Base table or view already exists
+SQLSTATE[42S21]: Column already exists
+SQLSTATE[42000]: Access denied for user
+```
+
+**原因分析**：
+1. 表或字段已存在
+2. 数据库用户权限不足
+3. 迁移文件语法错误
+4. migrations表损坏
+
+**解决方案**：
+
+**问题A：表已存在**
+```php
+// 使用 Schema::dropIfExists() 先删除
+public function up()
+{
+    Schema::dropIfExists('users');
+    Schema::create('users', function (Blueprint $table) {
+        // ...
+    });
+}
+```
+
+**问题B：字段已存在**
+```php
+// 检查字段是否存在
+public function up()
+{
+    Schema::table('users', function (Blueprint $table) {
+        if (!Schema::hasColumn('users', 'phone')) {
+            $table->string('phone')->nullable();
+        }
+    });
+}
+```
+
+**问题C：权限不足**
+```sql
+-- 授予完整权限
+GRANT ALL PRIVILEGES ON fitness_app.* TO 'fitness_user'@'%';
+FLUSH PRIVILEGES;
+```
+
+**问题D：查看迁移状态**
+```bash
+php artisan migrate:status
+
+# 手动标记迁移为已执行
+php artisan migrate:mark-migrated 2024_01_01_000000_create_users_table
+```
+
+---
+
+### 问题6：环境变量未生效
+
+**错误信息**：
+```
+APP_KEY is not set
+Database configuration not found
+```
+
+**原因分析**：
+1. .env.production文件未提交到Git
+2. Zeabur环境变量未配置
+3. 环境变量名称错误
+4. 缓存未清理
+
+**解决方案**：
+
+**步骤1：确认.env.production存在**
+```bash
+# 在代码仓库中
+ls -la .env.production
+# 应该存在且已提交到Git
+```
+
+**步骤2：检查Zeabur环境变量**
+- Zeabur控制台 → 服务 → Variable
+- 确认关键变量已配置（APP_KEY、DB_*等）
+
+**步骤3：清理配置缓存**
+```bash
+php artisan config:clear
+php artisan cache:clear
+php artisan config:cache
+```
+
+**步骤4：验证环境变量**
+```bash
+php artisan tinker
+>>> env('APP_KEY');
+>>> env('DB_HOST');
+>>> config('database.connections.mysql.host');
+```
+
+---
+
+### 问题7：流式响应中断
+
+**错误信息**：
+```
+Stream connection closed
+ERR_INCOMPLETE_CHUNKED_ENCODING
+```
+
+**原因分析**：
+1. Nginx缓冲配置问题
+2. PHP执行超时
+3. 网络连接中断
+4. DAML-RAG服务异常
+
+**解决方案**：
+
+**步骤1：检查Nginx配置**
+```nginx
+# docker/nginx/default.conf
+location /api/ai/ {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_buffering off;  # 禁用缓冲
+    proxy_cache off;
+    proxy_read_timeout 300s;
+    proxy_connect_timeout 75s;
+}
+```
+
+**步骤2：增加PHP超时时间**
+```ini
+# php.ini
+max_execution_time = 300
+```
+
+**步骤3：测试DAML-RAG连接**
+```bash
+curl http://fitness_daml_rag.zeabur.internal:8001/api/health
+# 应该返回健康状态
+```
+
+---
+
 ## 🔗 相关文档
 
-- [MySQL数据库结构](../02-核心架构/02-数据层/01-MySQL数据库结构-v1.md)
-- [会员系统实施指南](../04-部署指南/会员系统完整实施指南.md)
+- [MySQL数据库完整结构](../02-核心架构/02-数据层/03-MySQL数据库完整结构文档.md)
+- [会员系统完整实现](../03-代码参考/03-会员系统/02-会员系统完整实现.md)
+- [AI聊天系统实现](../03-代码参考/05-AI聊天系统/02-AI聊天系统完整实现.md)
 - [Zeabur生产环境规则](/.kiro/steering/zeabur-production.md)
+- [健康检查API](../05-API文档/05-健康检查API.md)
 
 ---
 
 **维护者**: 薛小川  
-**最后更新**: 2026-01-16
+**最后更新**: 2026-01-17
 
