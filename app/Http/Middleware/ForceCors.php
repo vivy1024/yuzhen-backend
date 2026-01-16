@@ -19,7 +19,7 @@ class ForceCors
     {
         // 处理OPTIONS预检请求
         if ($request->isMethod('OPTIONS')) {
-            return response('', 200)
+            return response('', 204)
                 ->header('Access-Control-Allow-Origin', $request->header('Origin') ?: '*')
                 ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
                 ->header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Internal-Token')
