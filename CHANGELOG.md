@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.95.0
+**版本**: v2.96.0
 **更新日期**: 2026-01-17
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,41 @@
 ---
 
 ## 版本历史
+
+### v2.96.0 (2026-01-17) - 更新域名架构为统一子域名 📚
+
+**变更类型**: 📚 文档更新
+
+**更新内容**:
+
+1. **域名架构统一** - 所有服务改用 `yuzhen-fitness.cn` 子域名
+   - phpMyAdmin: `phpmyadmin.preview.aliyun-zeabur.cn` → `phpmyadmin.yuzhen-fitness.cn`
+   - Qdrant Dashboard: `qdrant.preview.aliyun-zeabur.cn` → `qdrant.yuzhen-fitness.cn`
+   - Neo4j Browser: 新增 `neo4j.yuzhen-fitness.cn`
+
+2. **更新文档**
+   - `docs/06-部署运维/Zeabur部署指南.md` - 更新phpMyAdmin访问地址
+   - `.kiro/steering/zeabur-production.md` - 更新管理工具域名列表
+
+**域名架构**:
+| 服务类型 | 域名 | 说明 |
+|---------|------|------|
+| 官网 | yuzhen-fitness.cn | 主域名 |
+| 官网WWW | www.yuzhen-fitness.cn | WWW子域名 |
+| 应用PWA | app.yuzhen-fitness.cn | 用户应用 |
+| 后端API | api.yuzhen-fitness.cn | API接口 |
+| AI服务 | ai.yuzhen-fitness.cn | AI对话 |
+| phpMyAdmin | phpmyadmin.yuzhen-fitness.cn | 数据库管理 |
+| Qdrant | qdrant.yuzhen-fitness.cn | 向量数据库 |
+| Neo4j | neo4j.yuzhen-fitness.cn | 图数据库 |
+
+**设计理念**:
+- ✅ 统一域名体系，便于管理和记忆
+- ✅ 符合企业级应用域名规范
+- ✅ 支持SSL证书统一管理
+- ✅ 便于未来扩展新服务
+
+---
 
 ### v2.95.0 (2026-01-17) - 添加phpMyAdmin数据库管理说明 📚
 
@@ -33,7 +68,7 @@
    - 监控与维护建议
 
 **phpMyAdmin访问信息**:
-- URL: https://phpmyadmin.preview.aliyun-zeabur.cn
+- URL: https://phpmyadmin.yuzhen-fitness.cn
 - 服务器: 182.92.78.183:30932
 - 用户名: root
 - 数据库: fitness_app
