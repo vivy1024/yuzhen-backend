@@ -1,7 +1,7 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.80.0
-**更新日期**: 2026-01-15
+**版本**: v2.82.0
+**更新日期**: 2026-01-16
 **项目状态**: ✅ 生产运行
 
 ---
@@ -16,6 +16,43 @@
 ---
 
 ## 版本历史
+
+### v2.82.0 (2026-01-16) - 增强CORS配置和调试功能 🔧
+
+**变更类型**: 🔧 配置优化 + 🐛 Bug修复
+
+**变更内容**:
+1. **CORS配置优化** (`config/cors.php`)
+   - 改进 `allowed_origins` 解析：添加 `trim()` 和 `array_filter()`
+   - 防止环境变量中的空格导致配置失败
+
+2. **健康检查增强** (`HealthCheckController`)
+   - 新增 `/api/health/cors` 端点
+   - 返回CORS配置信息用于调试
+   - 包含：allowed_origins、env变量、paths、credentials设置
+
+3. **路由更新** (`routes/api.php`)
+   - 添加CORS配置检查路由
+
+**影响范围**: 生产环境CORS问题诊断
+**向后兼容**: ✅ 是
+
+---
+
+### v2.81.0 (2026-01-15) - 完全移除旧肌肉字段依赖 🔧
+
+**变更类型**: 🔧 代码清理
+
+**变更内容**:
+1. **ExerciseRepository**
+   - 搜索关键词：使用 `muscles_primary_zh` 数组字段替代 `primary_muscle_zh`
+   - 筛选选项：新增 `getMuscleOptions()` 方法处理数组字段
+   - 移除对旧字段 `primary_muscle_zh` 的依赖
+
+**影响范围**: 后端API
+**向后兼容**: ✅ 是（API响应仍包含旧字段）
+
+---
 
 ### v2.80.0 (2026-01-15) - 统一MySQL肌肉字段（三端数据库统一） 🔧
 

@@ -45,7 +45,7 @@ class ExerciseRepository extends BaseRepository implements ExerciseRepositoryInt
                 $q->where('name_en', 'like', "%{$keyword}%")
                   ->orWhere('name_zh', 'like', "%{$keyword}%")
                   ->orWhere('description_zh', 'like', "%{$keyword}%")
-                  ->orWhere('primary_muscle_zh', 'like', "%{$keyword}%");
+                  ->orWhereRaw("JSON_SEARCH(muscles_primary_zh, 'one', ?) IS NOT NULL", ["%{$keyword}%"]);
             });
         }
         
@@ -196,13 +196,13 @@ class ExerciseRepository extends BaseRepository implements ExerciseRepositoryInt
     /**
      * 获取唯一值（用于筛选选项）
      * 
-     * @version 2.0.3 修复字段名：使用 _zh 后缀字段
+     * @version 2.1.0 使用标准数组字段 muscles_primary_zh
      */
     private function getUniqueValues(string $column): array
     {
         // 字段名映射：API字段 -> 数据库实际字段
         $columnMap = [
-            'primary_muscle' => 'primary_muscle_zh',
+            'primary_muscle' => 'muscles_primary_zh',  // 使用标准数组字段
             'equipment' => 'equipment_zh',
             'difficulty' => 'difficulty_en',  // 难度用英文（用于查询）
             'mechanic_type' => 'mechanic_en',
@@ -210,6 +210,11 @@ class ExerciseRepository extends BaseRepository implements ExerciseRepositoryInt
         ];
         
         $dbColumn = $columnMap[$column] ?? $column;
+        
+        // 如果是数组字段（muscles_primary_zh），需要特殊处理
+        if ($dbColumn === 'muscles_primary_zh') {
+            return $this->getMuscleOptions();
+        }
         
         $results = Exercise::whereNotNull($dbColumn)
             ->where($dbColumn, '!=', '')
@@ -234,6 +239,56 @@ class ExerciseRepository extends BaseRepository implements ExerciseRepositoryInt
         })->values()->toArray();
         
         return $filtered;
+    }
+    
+    /**
+     * 获取肌肉群选项（从JSON数组字段解析）
+     * 
+     * @version 2.1.0 新增方法，处理 muscles_primary_zh 数组字段
+     */
+    private function getMuscleOptions(): array
+    {
+        // 获取所有非空的 muscles_primary_zh JSON字段
+        $musclesData = Exercise::whereNotNull('muscles_primary_zh')
+            ->where('muscles_primary_zh', '!=', '')
+            ->where('muscles_primary_zh', '!=', 'null')
+            ->where('muscles_primary_zh', '!=', '[]')
+            ->pluck('muscles_primary_zh');
+
+        $musclesCount = [];
+        
+        foreach ($musclesData as $muscleJson) {
+            // 处理JSON字符串或已经是数组的情况
+            if (is_string($muscleJson)) {
+                $muscleArray = json_decode($muscleJson, true);
+            } else {
+                $muscleArray = $muscleJson;
+            }
+            
+            // 处理数组格式的肌肉数据
+            if (is_array($muscleArray) && !empty($muscleArray)) {
+                foreach ($muscleArray as $muscle) {
+                    // 统计肌肉出现次数
+                    if ($muscle && !empty(trim($muscle))) {
+                        if (!isset($musclesCount[$muscle])) {
+                            $musclesCount[$muscle] = 0;
+                        }
+                        $musclesCount[$muscle]++;
+                    }
+                }
+            }
+        }
+        
+        // 转换为筛选选项格式并排序
+        $result = collect($musclesCount)->map(function ($count, $muscle) {
+            return [
+                'value' => $muscle,
+                'label' => $muscle,
+                'count' => $count,
+            ];
+        })->sortByDesc('count')->values()->toArray();
+        
+        return $result;
     }
 
     /**
