@@ -17,24 +17,29 @@
 
 ## 版本历史
 
-### v2.82.0 (2026-01-16) - 增强CORS配置和调试功能 🔧
+### v2.82.0 (2026-01-16) - 修复CORS配置问题 🐛
 
-**变更类型**: 🔧 配置优化 + 🐛 Bug修复
+**变更类型**: 🐛 Bug修复
 
-**变更内容**:
-1. **CORS配置优化** (`config/cors.php`)
-   - 改进 `allowed_origins` 解析：添加 `trim()` 和 `array_filter()`
-   - 防止环境变量中的空格导致配置失败
+**问题诊断**:
+- OPTIONS预检请求返回204，但缺少 `Access-Control-Allow-Origin` 头
+- 导致浏览器阻止实际的POST请求
+- 环境变量解析可能存在问题
+
+**修复方案**:
+1. **CORS配置** (`config/cors.php`)
+   - 改为硬编码域名列表，不依赖环境变量
+   - 确保生产域名正确配置
+   - 保留本地开发域名
 
 2. **健康检查增强** (`HealthCheckController`)
    - 新增 `/api/health/cors` 端点
    - 返回CORS配置信息用于调试
-   - 包含：allowed_origins、env变量、paths、credentials设置
 
 3. **路由更新** (`routes/api.php`)
    - 添加CORS配置检查路由
 
-**影响范围**: 生产环境CORS问题诊断
+**影响范围**: 生产环境CORS问题修复
 **向后兼容**: ✅ 是
 
 ---
