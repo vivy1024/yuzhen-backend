@@ -19,6 +19,9 @@ Route::prefix('foods')->group(function () {
     // 获取筛选选项
     Route::get('/filter-options', [FoodController::class, 'filterOptions']);
     
+    // 清除缓存（用于数据更新后刷新）
+    Route::get('/clear-cache', [FoodController::class, 'clearCache']);
+    
     // 搜索食物
     Route::get('/search', [FoodController::class, 'search']);
     
