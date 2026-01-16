@@ -17,29 +17,30 @@
 
 ## 版本历史
 
-### v2.82.0 (2026-01-16) - 修复CORS配置问题 🐛
+### v2.82.0 (2026-01-16) - 创建强制CORS中间件解决跨域问题 🐛
 
 **变更类型**: 🐛 Bug修复
 
-**问题诊断**:
-- OPTIONS预检请求返回204，但缺少 `Access-Control-Allow-Origin` 头
+**问题根源**:
+- Laravel内置的 `HandleCors` 中间件未正确返回 `Access-Control-Allow-Origin` 头
+- OPTIONS预检请求返回204，但缺少关键CORS头
 - 导致浏览器阻止实际的POST请求
-- 环境变量解析可能存在问题
 
-**修复方案**:
-1. **CORS配置** (`config/cors.php`)
-   - 改为硬编码域名列表，不依赖环境变量
-   - 确保生产域名正确配置
-   - 保留本地开发域名
+**解决方案**:
+1. **创建自定义CORS中间件** (`app/Http/Middleware/ForceCors.php`)
+   - 直接处理OPTIONS预检请求，返回完整CORS头
+   - 为所有响应强制添加CORS头
+   - 支持动态Origin（从请求头获取）
 
-2. **健康检查增强** (`HealthCheckController`)
-   - 新增 `/api/health/cors` 端点
-   - 返回CORS配置信息用于调试
+2. **替换内置CORS中间件** (`app/Http/Kernel.php`)
+   - 使用 `ForceCors` 替代 `HandleCors`
+   - 确保中间件优先级最高
 
-3. **路由更新** (`routes/api.php`)
-   - 添加CORS配置检查路由
+3. **CORS配置保留** (`config/cors.php`)
+   - 硬编码生产域名列表
+   - 作为配置参考保留
 
-**影响范围**: 生产环境CORS问题修复
+**影响范围**: 生产环境CORS问题彻底修复
 **向后兼容**: ✅ 是
 
 ---
