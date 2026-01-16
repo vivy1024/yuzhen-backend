@@ -17,12 +17,17 @@ class DatabaseSeeder extends Seeder
             // 1. 导入会员等级配置
             MembershipSeeder::class,
             
-            // 2. 导入1603个动作数据（包含19236个媒体文件）
-            OptimizedExercisesV2Importer::class,
+            // 2. 导入1790个动作数据（适配新表结构 name_en/name_zh）
+            ExercisesV2Importer::class,
+            
+            // 3. 导入FAQ数据
+            FaqSeeder::class,
         ]);
         
         $this->command->info('');
         $this->command->info('✅ 数据库初始化完成！');
+        $this->command->info('📝 注意：foods数据需要单独运行脚本导入');
+        $this->command->info('   docker exec fitness_php_v2 php /var/www/html/scripts/import_foods_to_mysql.php');
         $this->command->info('');
     }
 }
