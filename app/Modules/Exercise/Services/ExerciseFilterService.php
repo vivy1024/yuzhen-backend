@@ -30,40 +30,40 @@ class ExerciseFilterService
     {
         $cacheKey = $this->cacheService->generateFilterOptionsCacheKey();
         
-        return Cache::remember($cacheKey, 86400, function () {
-            $options = $this->repository->getFilterOptions();
-            
-            // 调试日志：记录原始数据（使用error级别确保输出）
-            \Log::error('ExerciseFilterService: 原始筛选选项数据', [
-                'grips_count' => count($options['grips'] ?? []),
-                'mechanics_count' => count($options['mechanics'] ?? []),
-                'forces_count' => count($options['forces'] ?? []),
-                'grips_sample' => array_slice($options['grips'] ?? [], 0, 3),
-                'mechanics_sample' => array_slice($options['mechanics'] ?? [], 0, 3),
-                'forces_sample' => array_slice($options['forces'] ?? [], 0, 3),
-            ]);
-            
-            // ✅ 修复：使用单数形式的键名，与前端 FilterOptions 类型匹配
-            $formatted = [
-                'muscle' => $this->formatOptions($options['muscles'] ?? []),
-                'equipment' => $this->formatOptions($options['equipment'] ?? []),
-                'difficulty' => $this->formatDifficulties($options['difficulties'] ?? []),
-                'grip' => $this->formatOptions($options['grips'] ?? []),
-                'mechanic' => $this->formatOptions($options['mechanics'] ?? []),
-                'force' => $this->formatOptions($options['forces'] ?? []),
-                'kinetic_chain' => $options['kinetic_chains'] ?? [],
-                'safety_level' => $options['safety_levels'] ?? [],
-            ];
-            
-            // 调试日志：记录格式化后的数据（使用error级别确保输出）
-            \Log::error('ExerciseFilterService: 格式化后的筛选选项数据', [
-                'grip_count' => count($formatted['grip']),
-                'mechanic_count' => count($formatted['mechanic']),
-                'force_count' => count($formatted['force']),
-            ]);
-            
-            return $formatted;
-        });
+        // 临时禁用缓存，直接从数据库获取数据
+        // TODO: 调查生产环境缓存问题后恢复缓存
+        $options = $this->repository->getFilterOptions();
+        
+        // 调试日志：记录原始数据（使用error级别确保输出）
+        \Log::error('ExerciseFilterService: 原始筛选选项数据', [
+            'grips_count' => count($options['grips'] ?? []),
+            'mechanics_count' => count($options['mechanics'] ?? []),
+            'forces_count' => count($options['forces'] ?? []),
+            'grips_sample' => array_slice($options['grips'] ?? [], 0, 3),
+            'mechanics_sample' => array_slice($options['mechanics'] ?? [], 0, 3),
+            'forces_sample' => array_slice($options['forces'] ?? [], 0, 3),
+        ]);
+        
+        // ✅ 修复：使用单数形式的键名，与前端 FilterOptions 类型匹配
+        $formatted = [
+            'muscle' => $this->formatOptions($options['muscles'] ?? []),
+            'equipment' => $this->formatOptions($options['equipment'] ?? []),
+            'difficulty' => $this->formatDifficulties($options['difficulties'] ?? []),
+            'grip' => $this->formatOptions($options['grips'] ?? []),
+            'mechanic' => $this->formatOptions($options['mechanics'] ?? []),
+            'force' => $this->formatOptions($options['forces'] ?? []),
+            'kinetic_chain' => $options['kinetic_chains'] ?? [],
+            'safety_level' => $options['safety_levels'] ?? [],
+        ];
+        
+        // 调试日志：记录格式化后的数据（使用error级别确保输出）
+        \Log::error('ExerciseFilterService: 格式化后的筛选选项数据', [
+            'grip_count' => count($formatted['grip']),
+            'mechanic_count' => count($formatted['mechanic']),
+            'force_count' => count($formatted['force']),
+        ]);
+        
+        return $formatted;
     }
 
     /**
