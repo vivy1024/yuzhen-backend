@@ -163,4 +163,28 @@ class FoodController extends BaseController
             return $this->handleException($e, '获取筛选选项');
         }
     }
+
+    /**
+     * 清除缓存
+     * 
+     * GET /api/foods/clear-cache
+     * 用于数据更新后刷新缓存
+     */
+    public function clearCache(): JsonResponse
+    {
+        try {
+            $this->foodService->clearCache();
+            
+            // 重新获取分类数据
+            $categories = $this->foodService->getCategories();
+            
+            return $this->success([
+                'cleared' => true,
+                'categories_count' => count($categories),
+            ], '缓存已清除并重新加载');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '清除缓存');
+        }
+    }
 }
