@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.86.0
+**版本**: v2.87.0
 **更新日期**: 2026-01-16
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,40 @@
 ---
 
 ## 版本历史
+
+### v2.87.0 (2026-01-16) - 修复生产环境筛选功能缓存问题 🐛
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**:
+- 动作库页面显示"暂无肌群数据"
+- 食物库页面分类筛选不显示
+- 生产环境API返回空数组
+
+**根因分析**:
+1. 生产环境使用file缓存驱动，数据恢复前缓存了空数据
+2. 前端localStorage有24小时缓存，缓存了空的筛选选项
+3. HTTP响应头设置了24小时缓存，浏览器缓存了空响应
+
+**解决方案**:
+1. **临时禁用后端缓存** - ExerciseFilterService和FoodService
+2. **添加缓存清除API** - `/api/exercises-v2/filter-options/clear-cache`和`/api/foods/clear-cache`
+3. **添加数据检查API** - `/api/test/check-muscles-data`和`/api/test/check-foods-data`
+4. **清除前端localStorage缓存** - `exercise_filter_options`和`food_categories`
+5. **强制刷新浏览器** - 绕过HTTP缓存
+
+**验证结果**:
+- 动作库筛选: 45个肌群选项 ✅
+- 食物库筛选: 16个分类选项 ✅
+
+**修改文件**:
+- `app/Modules/Exercise/Services/ExerciseFilterService.php` - 临时禁用缓存
+- `app/Modules/Exercise/Controllers/ExerciseFilterController.php` - 添加clearCache方法
+- `app/Modules/Food/Services/FoodService.php` - 临时禁用缓存
+- `app/Modules/Food/Controllers/FoodController.php` - 添加clearCache方法
+- `routes/api.php` - 添加临时测试路由
+
+---
 
 ### v2.86.0 (2026-01-16) - 修复数据丢失问题，恢复动作库和食物库 🐛
 
