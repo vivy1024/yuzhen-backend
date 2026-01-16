@@ -23,6 +23,40 @@ Route::get('/health/cors', [\App\Http\Controllers\HealthCheckController::class, 
 
 /*
 |--------------------------------------------------------------------------
+| 缓存清除（临时）
+|--------------------------------------------------------------------------
+*/
+Route::get('/cache/clear-foods', function () {
+    try {
+        \Illuminate\Support\Facades\Cache::forget('foods:categories');
+        \Illuminate\Support\Facades\Cache::forget('foods:subcategories:all');
+        \Illuminate\Support\Facades\Cache::forget('foods:filter_options');
+        
+        // 重新获取分类数据
+        $categories = DB::table('foods')
+            ->select('category')
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->distinct()
+            ->pluck('category')
+            ->toArray();
+        
+        return response()->json([
+            'code' => 200,
+            'msg' => '食物缓存已清除',
+            'data' => [
+                'cleared' => true,
+                'categories_count' => count($categories),
+                'categories' => $categories,
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['code' => 500, 'error' => $e->getMessage()], 500);
+    }
+});
+
+/*
+|--------------------------------------------------------------------------
 | 数据库测试（临时）
 |--------------------------------------------------------------------------
 */
