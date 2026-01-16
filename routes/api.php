@@ -55,6 +55,40 @@ Route::get('/cache/clear-foods', function () {
     }
 });
 
+// 检查exercises表的muscles_primary_zh字段
+Route::get('/test/check-muscles-data', function () {
+    try {
+        $total = DB::table('exercises')->count();
+        $hasMusclesPrimaryZh = DB::table('exercises')
+            ->whereNotNull('muscles_primary_zh')
+            ->where('muscles_primary_zh', '!=', '')
+            ->where('muscles_primary_zh', '!=', '[]')
+            ->count();
+        $hasPrimaryMuscleZh = DB::table('exercises')
+            ->whereNotNull('primary_muscle_zh')
+            ->where('primary_muscle_zh', '!=', '')
+            ->count();
+        
+        // 获取样本数据
+        $sample = DB::table('exercises')
+            ->select('id', 'name_zh', 'primary_muscle_zh', 'muscles_primary_zh', 'equipment_zh', 'difficulty_en')
+            ->limit(5)
+            ->get();
+        
+        return response()->json([
+            'code' => 200,
+            'data' => [
+                'total_exercises' => $total,
+                'has_muscles_primary_zh' => $hasMusclesPrimaryZh,
+                'has_primary_muscle_zh' => $hasPrimaryMuscleZh,
+                'sample_data' => $sample,
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['code' => 500, 'error' => $e->getMessage()], 500);
+    }
+});
+
 /*
 |--------------------------------------------------------------------------
 | 数据库测试（临时）
