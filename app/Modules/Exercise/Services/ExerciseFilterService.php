@@ -24,27 +24,22 @@ class ExerciseFilterService
     }
 
     /**
-     * 获取筛选选项
+     * 获取筛选选项（带缓存，不缓存空结果）
      */
     public function getFilterOptions(): array
     {
         $cacheKey = $this->cacheService->generateFilterOptionsCacheKey();
         
-        // 临时禁用缓存，直接从数据库获取数据
-        // TODO: 调查生产环境缓存问题后恢复缓存
+        // 尝试从缓存获取
+        $cached = Cache::get($cacheKey);
+        if ($cached && $this->isValidFilterOptions($cached)) {
+            return $cached;
+        }
+        
+        // 从数据库获取
         $options = $this->repository->getFilterOptions();
         
-        // 调试日志：记录原始数据（使用error级别确保输出）
-        \Log::error('ExerciseFilterService: 原始筛选选项数据', [
-            'grips_count' => count($options['grips'] ?? []),
-            'mechanics_count' => count($options['mechanics'] ?? []),
-            'forces_count' => count($options['forces'] ?? []),
-            'grips_sample' => array_slice($options['grips'] ?? [], 0, 3),
-            'mechanics_sample' => array_slice($options['mechanics'] ?? [], 0, 3),
-            'forces_sample' => array_slice($options['forces'] ?? [], 0, 3),
-        ]);
-        
-        // ✅ 修复：使用单数形式的键名，与前端 FilterOptions 类型匹配
+        // 格式化数据
         $formatted = [
             'muscle' => $this->formatOptions($options['muscles'] ?? []),
             'equipment' => $this->formatOptions($options['equipment'] ?? []),
@@ -56,14 +51,21 @@ class ExerciseFilterService
             'safety_level' => $options['safety_levels'] ?? [],
         ];
         
-        // 调试日志：记录格式化后的数据（使用error级别确保输出）
-        \Log::error('ExerciseFilterService: 格式化后的筛选选项数据', [
-            'grip_count' => count($formatted['grip']),
-            'mechanic_count' => count($formatted['mechanic']),
-            'force_count' => count($formatted['force']),
-        ]);
+        // ✅ 只有非空结果才缓存（24小时）
+        if ($this->isValidFilterOptions($formatted)) {
+            Cache::put($cacheKey, $formatted, 86400);
+        }
         
         return $formatted;
+    }
+    
+    /**
+     * 检查筛选选项是否有效（非空）
+     */
+    private function isValidFilterOptions(array $options): bool
+    {
+        // 至少muscle或equipment有数据才算有效
+        return !empty($options['muscle']) || !empty($options['equipment']);
     }
 
     /**

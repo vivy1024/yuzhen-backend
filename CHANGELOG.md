@@ -32,20 +32,24 @@
 3. HTTP响应头设置了24小时缓存，浏览器缓存了空响应
 
 **解决方案**:
-1. **临时禁用后端缓存** - ExerciseFilterService和FoodService
+1. **恢复缓存但添加空结果检查** - 只有非空数据才会被缓存
 2. **添加缓存清除API** - `/api/exercises-v2/filter-options/clear-cache`和`/api/foods/clear-cache`
 3. **添加数据检查API** - `/api/test/check-muscles-data`和`/api/test/check-foods-data`
 4. **清除前端localStorage缓存** - `exercise_filter_options`和`food_categories`
 5. **强制刷新浏览器** - 绕过HTTP缓存
+
+**核心修复**:
+- ExerciseFilterService: 添加`isValidFilterOptions()`检查，空结果不缓存
+- FoodService: `getCategories()`和`getFilterOptions()`添加空结果检查
 
 **验证结果**:
 - 动作库筛选: 45个肌群选项 ✅
 - 食物库筛选: 16个分类选项 ✅
 
 **修改文件**:
-- `app/Modules/Exercise/Services/ExerciseFilterService.php` - 临时禁用缓存
+- `app/Modules/Exercise/Services/ExerciseFilterService.php` - 恢复缓存，添加空结果检查
 - `app/Modules/Exercise/Controllers/ExerciseFilterController.php` - 添加clearCache方法
-- `app/Modules/Food/Services/FoodService.php` - 临时禁用缓存
+- `app/Modules/Food/Services/FoodService.php` - 恢复缓存，添加空结果检查
 - `app/Modules/Food/Controllers/FoodController.php` - 添加clearCache方法
 - `routes/api.php` - 添加临时测试路由
 
