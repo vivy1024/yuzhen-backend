@@ -11,17 +11,13 @@ use RecursiveDirectoryIterator;
 use Exception;
 
 /**
- * 优化的Exercise V2数据导入器
+ * ⚠️ 已废弃 - 请使用 ExercisesV2Importer
  * 
- * 特点：
- * 1. 支持本地和CDN双模式
- * 2. 结构化存储媒体文件
- * 3. 分表存储指导、肌肉、标签
- * 4. 自动批量导入
+ * 此Seeder使用旧表结构（name字段），与2026-01-04重建的新表结构（name_en/name_zh）不兼容。
  * 
- * 使用：
- * php artisan db:seed --class=OptimizedExercisesV2Importer
+ * 新Seeder: ExercisesV2Importer.php
  * 
+ * @deprecated 2026-01-16 使用 ExercisesV2Importer 替代
  * @version 1.0.0
  * @date 2025-11-01
  */
