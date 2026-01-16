@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.85.0
+**版本**: v2.86.0
 **更新日期**: 2026-01-16
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,42 @@
 ---
 
 ## 版本历史
+
+### v2.86.0 (2026-01-16) - 修复数据丢失问题，恢复动作库和食物库 🐛
+
+**变更类型**: 🐛 Bug修复 + 🔧 数据恢复
+
+**问题描述**:
+- exercises表和foods表数据被清空（本地和生产环境）
+- 动作库页面和食物库页面显示空数据
+
+**根因分析**:
+1. exercises表结构在2026-01-04被重建（`recreate_exercises_table_v2.php`）
+2. 新表结构使用双语字段（`name_en`/`name_zh`），旧Seeder使用单一字段（`name`）
+3. 旧Seeder `OptimizedExercisesV2Importer` 与新表结构不兼容
+4. foods导入脚本存在数据类型溢出问题（`ash`字段超出范围）
+
+**解决方案**:
+1. **新建ExercisesV2Importer** (`database/seeders/ExercisesV2Importer.php`)
+   - 适配新表结构（`name_en`/`name_zh`双语字段）
+   - 完整映射所有34个字段
+   - 支持媒体文件关联
+2. **修复foods导入脚本** (`scripts/import_foods_to_mysql.php`)
+   - 添加`cleanNumericValue()`函数进行数据清洗
+   - 处理异常值和空值
+   - 确保数值在数据库字段范围内
+
+**恢复结果**:
+- exercises: 1790条 ✅
+- foods: 1851条 ✅
+
+**新增文件**:
+- `database/seeders/ExercisesV2Importer.php`
+
+**修改文件**:
+- `scripts/import_foods_to_mysql.php`
+
+---
 
 ### v2.85.0 (2026-01-16) - 禁用Laravel CORS中间件避免重复头 🐛
 
