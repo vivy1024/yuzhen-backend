@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.82.0
+**版本**: v2.83.0
 **更新日期**: 2026-01-16
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,38 @@
 ---
 
 ## 版本历史
+
+### v2.83.0 (2026-01-16) - 添加自定义nginx配置解决Zeabur CORS问题 🐛
+
+**变更类型**: 🐛 Bug修复
+
+**问题根源**:
+- Zeabur的nginx代理层删除或覆盖了Laravel设置的 `Access-Control-Allow-Origin` 头
+- 导致浏览器CORS检查失败，阻止跨域请求
+- 本地Docker环境（使用自定义nginx配置）工作正常
+
+**解决方案**:
+1. **创建自定义nginx配置文件** (`nginx.conf`)
+   - 在nginx层面添加CORS头（`add_header ... always`）
+   - 确保所有响应都包含必要的CORS头
+   - 处理OPTIONS预检请求返回204状态码
+
+**配置要点**:
+```nginx
+add_header 'Access-Control-Allow-Origin' '$http_origin' always;
+add_header 'Access-Control-Allow-Credentials' 'true' always;
+add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS, PATCH' always;
+add_header 'Access-Control-Allow-Headers' 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Internal-Token' always;
+```
+
+**部署步骤**:
+1. 提交nginx.conf到GitHub
+2. 在Zeabur控制台使用Config Editor挂载配置文件
+3. 重启服务验证CORS头正确返回
+
+**影响范围**: 生产环境CORS配置
+
+---
 
 ### v2.82.0 (2026-01-16) - 创建强制CORS中间件解决跨域问题 🐛
 
