@@ -89,6 +89,43 @@ Route::get('/test/check-muscles-data', function () {
     }
 });
 
+// 检查foods表的数据
+Route::get('/test/check-foods-data', function () {
+    try {
+        $total = DB::table('foods')->count();
+        $hasCategory = DB::table('foods')
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->count();
+        
+        // 获取分类统计
+        $categories = DB::table('foods')
+            ->select('category', DB::raw('COUNT(*) as count'))
+            ->groupBy('category')
+            ->orderBy('count', 'desc')
+            ->get();
+        
+        // 获取样本数据
+        $sample = DB::table('foods')
+            ->select('id', 'food_code', 'name', 'category', 'subcategory', 'energy_kcal', 'protein')
+            ->limit(5)
+            ->get();
+        
+        return response()->json([
+            'code' => 200,
+            'data' => [
+                'total_foods' => $total,
+                'has_category' => $hasCategory,
+                'categories_count' => count($categories),
+                'categories' => $categories,
+                'sample_data' => $sample,
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['code' => 500, 'error' => $e->getMessage()], 500);
+    }
+});
+
 /*
 |--------------------------------------------------------------------------
 | 数据库测试（临时）
