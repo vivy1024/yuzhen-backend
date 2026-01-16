@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 */
 Route::get('/health', [\App\Http\Controllers\HealthCheckController::class, 'index']);
 Route::get('/health/components', [\App\Http\Controllers\HealthCheckController::class, 'components']);
+Route::get('/health/cors', [\App\Http\Controllers\HealthCheckController::class, 'cors']);
 
 /*
 |--------------------------------------------------------------------------

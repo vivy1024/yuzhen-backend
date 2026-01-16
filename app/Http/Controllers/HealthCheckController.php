@@ -36,6 +36,27 @@ class HealthCheckController extends Controller
     }
 
     /**
+     * CORS配置检查
+     * 
+     * GET /api/health/cors
+     * 
+     * @return JsonResponse
+     */
+    public function cors(): JsonResponse
+    {
+        return response()->json([
+            'code' => 200,
+            'msg' => 'OK',
+            'data' => [
+                'cors_allowed_origins' => config('cors.allowed_origins'),
+                'cors_allowed_origins_env' => env('CORS_ALLOWED_ORIGINS'),
+                'cors_paths' => config('cors.paths'),
+                'cors_supports_credentials' => config('cors.supports_credentials'),
+            ]
+        ]);
+    }
+
+    /**
      * 组件健康状态检查
      * 
      * GET /api/health/components
