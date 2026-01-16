@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.84.0
+**版本**: v2.85.0
 **更新日期**: 2026-01-16
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,36 @@
 ---
 
 ## 版本历史
+
+### v2.85.0 (2026-01-16) - 禁用Laravel CORS中间件避免重复头 🐛
+
+**变更类型**: 🐛 Bug修复
+
+**问题根源**:
+生产环境CORS错误：`The 'Access-Control-Allow-Origin' header contains multiple values 'https://app.yuzhen-fitness.cn, https://app.yuzhen-fitness.cn', but only one is allowed.`
+
+**原因分析**:
+- nginx配置使用 `add_header ... always` 添加CORS头
+- Laravel应用的 `ForceCors` 中间件也添加CORS头
+- 导致同一个头被添加两次，浏览器拒绝请求
+
+**解决方案**:
+1. **禁用Laravel CORS中间件** (`app/Http/Kernel.php`)
+   - 注释掉 `ForceCors` 中间件
+   - 由nginx独自处理CORS，避免重复
+2. **保留nginx CORS配置** (`docker/nginx/default.conf`)
+   - nginx配置已包含完整的CORS头
+   - 支持所有正式域名和测试域名
+
+**技术说明**:
+- nginx的 `add_header ... always` 会在所有响应中添加头（包括4xx/5xx）
+- Laravel中间件也会添加相同的头
+- 浏览器要求 `Access-Control-Allow-Origin` 只能有一个值
+- 解决方案：选择一层处理CORS（nginx层更高效）
+
+**影响范围**: 生产环境CORS问题彻底修复
+
+---
 
 ### v2.84.0 (2026-01-16) - 更新nginx CORS配置支持所有正式域名 🐛
 
