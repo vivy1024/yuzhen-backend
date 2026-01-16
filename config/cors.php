@@ -15,7 +15,12 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => array_filter(array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:9000')))),
+    'allowed_origins' => [
+        'https://app.yuzhen-fitness.cn',
+        'https://yuzhen-fitness.cn',
+        'https://www.yuzhen-fitness.cn',
+        'http://localhost:9000', // 本地开发
+    ],
 
     'allowed_origins_patterns' => [],
 
