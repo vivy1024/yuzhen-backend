@@ -4,7 +4,9 @@ namespace App\Modules\Exercise\Controllers;
 
 use App\Infrastructure\Http\Controllers\BaseController;
 use App\Modules\Exercise\Services\ExerciseFilterService;
+use App\Modules\Exercise\Services\ExerciseCacheService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Exercise Filter Controller
@@ -14,10 +16,14 @@ use Illuminate\Http\JsonResponse;
 class ExerciseFilterController extends BaseController
 {
     protected ExerciseFilterService $filterService;
+    protected ExerciseCacheService $cacheService;
     
-    public function __construct(ExerciseFilterService $filterService)
-    {
+    public function __construct(
+        ExerciseFilterService $filterService,
+        ExerciseCacheService $cacheService
+    ) {
         $this->filterService = $filterService;
+        $this->cacheService = $cacheService;
     }
 
     /**
@@ -40,6 +46,36 @@ class ExerciseFilterController extends BaseController
             
         } catch (\Exception $e) {
             return $this->handleException($e, '获取筛选选项');
+        }
+    }
+
+    /**
+     * 清除筛选选项缓存
+     * 
+     * GET /api/exercises-v2/filter-options/clear-cache
+     * 用于数据更新后刷新缓存
+     */
+    public function clearCache(): JsonResponse
+    {
+        try {
+            $cacheKey = $this->cacheService->generateFilterOptionsCacheKey();
+            Cache::forget($cacheKey);
+            
+            // 重新获取并缓存
+            $options = $this->filterService->getFilterOptions();
+            
+            return $this->success([
+                'cleared' => true,
+                'cache_key' => $cacheKey,
+                'new_data_count' => [
+                    'muscle' => count($options['muscle'] ?? []),
+                    'equipment' => count($options['equipment'] ?? []),
+                    'difficulty' => count($options['difficulty'] ?? []),
+                ]
+            ], '缓存已清除并重新加载');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '清除缓存');
         }
     }
 }

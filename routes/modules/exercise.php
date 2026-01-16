@@ -18,6 +18,9 @@ Route::prefix('exercises-v2')->group(function () {
     // 筛选选项
     Route::get('/filter-options', [ExerciseFilterController::class, 'options']);
     
+    // 清除筛选选项缓存（公开访问，用于数据更新后刷新）
+    Route::get('/filter-options/clear-cache', [ExerciseFilterController::class, 'clearCache']);
+    
     // 搜索
     Route::get('/search', [ExerciseController::class, 'search']);
     
