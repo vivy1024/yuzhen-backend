@@ -74,6 +74,17 @@ $imported = 0;
 
 echo "Importing foods...\n";
 
+// 辅助函数：清洗数值，确保在合理范围内
+function cleanNumericValue($value, $max = 999.99, $decimals = 2) {
+    if ($value === null || $value === '' || $value === '—' || $value === '?') {
+        return null;
+    }
+    $num = floatval($value);
+    if ($num < 0) return null;
+    if ($num > $max) return $max; // 超出范围则截断
+    return round($num, $decimals);
+}
+
 foreach ($batches as $index => $batch) {
     $insertData = [];
     
@@ -84,35 +95,35 @@ foreach ($batches as $index => $batch) {
             'name' => $food['name'],
             'category' => $food['category'],
             'subcategory' => $food['subcategory'],
-            'edible' => $food['edible'] ?? 100, // 默认100%可食用
-            'water' => $food['water'],
-            'energy_kcal' => $food['energy_kcal'],
-            'energy_kj' => $food['energy_kj'],
-            'protein' => $food['protein'],
-            'fat' => $food['fat'],
-            'carbohydrate' => $food['carbohydrate'],
-            'dietary_fiber' => $food['dietary_fiber'],
-            'cholesterol' => $food['cholesterol'],
-            'ash' => $food['ash'],
-            'vitamin_a' => $food['vitamin_a'],
-            'carotene' => $food['carotene'],
-            'retinol' => $food['retinol'],
-            'thiamin' => $food['thiamin'],
-            'riboflavin' => $food['riboflavin'],
-            'niacin' => $food['niacin'],
-            'vitamin_c' => $food['vitamin_c'],
-            'vitamin_e_total' => $food['vitamin_e_total'],
-            'calcium' => $food['calcium'],
-            'phosphorus' => $food['phosphorus'],
-            'potassium' => $food['potassium'],
-            'sodium' => $food['sodium'],
-            'magnesium' => $food['magnesium'],
-            'iron' => $food['iron'],
-            'zinc' => $food['zinc'],
-            'selenium' => $food['selenium'],
-            'copper' => $food['copper'],
-            'manganese' => $food['manganese'],
-            'remark' => $food['remark'] === '—' ? null : $food['remark'],
+            'edible' => cleanNumericValue($food['edible'] ?? 100, 100, 1),
+            'water' => cleanNumericValue($food['water'], 100, 1),
+            'energy_kcal' => cleanNumericValue($food['energy_kcal'], 9999, 1),
+            'energy_kj' => cleanNumericValue($food['energy_kj'], 99999, 1),
+            'protein' => cleanNumericValue($food['protein'], 99, 2),
+            'fat' => cleanNumericValue($food['fat'], 99, 2),
+            'carbohydrate' => cleanNumericValue($food['carbohydrate'], 99, 2),
+            'dietary_fiber' => cleanNumericValue($food['dietary_fiber'], 99, 2),
+            'cholesterol' => cleanNumericValue($food['cholesterol'], 9999, 1),
+            'ash' => cleanNumericValue($food['ash'], 99, 2), // 灰分最大99%
+            'vitamin_a' => cleanNumericValue($food['vitamin_a'], 99999, 2),
+            'carotene' => cleanNumericValue($food['carotene'], 99999, 2),
+            'retinol' => cleanNumericValue($food['retinol'], 99999, 2),
+            'thiamin' => cleanNumericValue($food['thiamin'], 999, 3),
+            'riboflavin' => cleanNumericValue($food['riboflavin'], 99, 3),
+            'niacin' => cleanNumericValue($food['niacin'], 999, 3),
+            'vitamin_c' => cleanNumericValue($food['vitamin_c'], 9999, 2),
+            'vitamin_e_total' => cleanNumericValue($food['vitamin_e_total'], 999, 3),
+            'calcium' => cleanNumericValue($food['calcium'], 99999, 2),
+            'phosphorus' => cleanNumericValue($food['phosphorus'], 99999, 2),
+            'potassium' => cleanNumericValue($food['potassium'], 99999, 2),
+            'sodium' => cleanNumericValue($food['sodium'], 99999, 2),
+            'magnesium' => cleanNumericValue($food['magnesium'], 99999, 2),
+            'iron' => cleanNumericValue($food['iron'], 999, 3),
+            'zinc' => cleanNumericValue($food['zinc'], 999, 3),
+            'selenium' => cleanNumericValue($food['selenium'], 9999, 3),
+            'copper' => cleanNumericValue($food['copper'], 999, 3),
+            'manganese' => cleanNumericValue($food['manganese'], 999, 3),
+            'remark' => ($food['remark'] === '—' || $food['remark'] === '?') ? null : $food['remark'],
             'gi_value' => null,
             'price_level' => null,
             'view_count' => 0,
