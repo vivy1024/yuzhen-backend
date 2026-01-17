@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Infrastructure\Http\Controllers\BaseController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -14,10 +15,11 @@ use Illuminate\Support\Facades\Log;
  *
  * 架构: 前端(9000) → 后端API网关(8000) → MCO服务器(8001)
  *
- * @version 1.0.0
+ * @version v1.1.0
+ * @date 2026-01-17 (修复API响应规范合规性)
  * @created 2025-11-03
  */
-class MCPToolsController extends Controller
+class MCPToolsController extends BaseController
 {
     /**
      * MCO服务器基础URL
@@ -75,7 +77,7 @@ class MCPToolsController extends Controller
                 ]);
 
             if ($response->successful()) {
-                return response()->json($response->json());
+                return $this->success($response->json());
             }
 
             Log::error("MCO调用失败", [
@@ -83,23 +85,10 @@ class MCPToolsController extends Controller
                 'body' => $response->body(),
             ]);
 
-            return response()->json([
-                'success' => false,
-                'error' => 'MCO服务器响应失败',
-                'timestamp' => now()->toISOString(),
-            ], 500);
+            return $this->fail('MCO服务器响应失败', 500);
 
         } catch (\Exception $e) {
-            Log::error("MCP工具调用异常", [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-                'timestamp' => now()->toISOString(),
-            ], 500);
+            return $this->handleException($e, 'MCP工具调用');
         }
     }
 
@@ -140,11 +129,10 @@ class MCPToolsController extends Controller
             if ($response->successful()) {
                 $data = $response->json();
 
-                return response()->json([
-                    'code' => 200,
-                    'msg' => '生成成功',
-                    'data' => $this->parseTrainingPlan($data['response']),
-                ]);
+                return $this->success(
+                    $this->parseTrainingPlan($data['response']),
+                    '生成成功'
+                );
             }
 
             Log::error("MCO生成训练计划失败", [
@@ -152,23 +140,10 @@ class MCPToolsController extends Controller
                 'body' => $response->body(),
             ]);
 
-            return response()->json([
-                'code' => 500,
-                'msg' => 'AI生成失败，请重试',
-                'data' => null,
-            ], 500);
+            return $this->fail('AI生成失败，请重试', 500);
 
         } catch (\Exception $e) {
-            Log::error("生成训练计划异常", [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '生成失败: ' . $e->getMessage(),
-                'data' => null,
-            ], 500);
+            return $this->handleException($e, '生成训练计划');
         }
     }
 
@@ -192,25 +167,16 @@ class MCPToolsController extends Controller
             if ($response->successful()) {
                 $data = $response->json();
 
-                return response()->json([
-                    'code' => 200,
-                    'msg' => '计算成功',
-                    'data' => $this->parseWeightRecommendation($data['response']),
-                ]);
+                return $this->success(
+                    $this->parseWeightRecommendation($data['response']),
+                    '计算成功'
+                );
             }
 
-            return response()->json([
-                'code' => 500,
-                'msg' => '计算失败',
-                'data' => null,
-            ], 500);
+            return $this->fail('计算失败', 500);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'msg' => $e->getMessage(),
-                'data' => null,
-            ], 500);
+            return $this->handleException($e, '计算训练重量');
         }
     }
 
@@ -234,25 +200,16 @@ class MCPToolsController extends Controller
             if ($response->successful()) {
                 $data = $response->json();
 
-                return response()->json([
-                    'code' => 200,
-                    'msg' => '推荐成功',
-                    'data' => $this->parseRPERecommendation($data['response']),
-                ]);
+                return $this->success(
+                    $this->parseRPERecommendation($data['response']),
+                    '推荐成功'
+                );
             }
 
-            return response()->json([
-                'code' => 500,
-                'msg' => '推荐失败',
-                'data' => null,
-            ], 500);
+            return $this->fail('推荐失败', 500);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'msg' => $e->getMessage(),
-                'data' => null,
-            ], 500);
+            return $this->handleException($e, '推荐RPE范围');
         }
     }
 
@@ -291,31 +248,23 @@ class MCPToolsController extends Controller
             $limit = $params['limit'] ?? 20;
             $exercises = $query->limit($limit)->get();
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '搜索成功',
-                'data' => $exercises->map(function($ex) {
-                    return [
-                        'id' => $ex->id,
-                        'name' => $ex->name_zh,
-                        'name_en' => $ex->name_en,
-                        'description' => $ex->description_zh,
-                        'muscle_group' => $ex->primary_muscle,
-                        'secondary_muscles' => json_decode($ex->secondary_muscles ?? '[]', true),
-                        'equipment' => $ex->equipment,
-                        'difficulty' => $ex->difficulty,
-                        'image_url' => $ex->image_url,
-                        'video_url' => $ex->video_url,
-                    ];
-                }),
-            ]);
+            return $this->success($exercises->map(function($ex) {
+                return [
+                    'id' => $ex->id,
+                    'name' => $ex->name_zh,
+                    'name_en' => $ex->name_en,
+                    'description' => $ex->description_zh,
+                    'muscle_group' => $ex->primary_muscle,
+                    'secondary_muscles' => json_decode($ex->secondary_muscles ?? '[]', true),
+                    'equipment' => $ex->equipment,
+                    'difficulty' => $ex->difficulty,
+                    'image_url' => $ex->image_url,
+                    'video_url' => $ex->video_url,
+                ];
+            }), '搜索成功');
 
         } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'msg' => $e->getMessage(),
-                'data' => null,
-            ], 500);
+            return $this->handleException($e, '搜索动作');
         }
     }
 

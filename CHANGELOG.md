@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.102.0
+**版本**: v2.103.0
 **更新日期**: 2026-01-17
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,65 @@
 ---
 
 ## 版本历史
+
+### v2.103.0 (2026-01-17) - API响应规范合规性修复（低优先级第1批） 🔧
+
+**变更类型**: 🔧 Bug修复 / 代码质量提升
+
+**修复内容**:
+
+1. **修复低优先级控制器（4个）**
+   - ✅ UserCreditsController - 用户额外次数管理控制器
+   - ✅ MetricsProxyController - Prometheus指标代理控制器
+   - ✅ AdminFeedbackController - 管理员反馈控制器
+   - ✅ MCPToolsController - MCP工具控制器
+   - 修复方法数: 约25个
+   - 修复类型: 继承关系、响应格式、异常处理
+
+2. **具体修复**
+   - 继承关系: `extends Controller` → `extends BaseController`
+   - 响应方法: `response()->json()` → `$this->success()` / `$this->fail()` / `$this->page()`
+   - 异常处理: 统一使用 `$this->handleException($e, '操作名称')`
+   - 添加try-catch包裹所有方法
+   - 更新版本注释: v1.0.0 → v1.1.0 (2026-01-17: 修复API响应规范合规性)
+
+3. **修复效果**
+   - ✅ 累计修复13个控制器（3个高优先级 + 6个中优先级 + 4个低优先级）
+   - ✅ 累计修复约85个方法
+   - ✅ 响应格式完全统一
+   - ✅ 异常处理标准化
+   - ✅ 代码质量显著提升
+
+4. **相关文档**
+   - 修复报告: `docs/06-部署运维/API响应规范修复报告-2026-01-17.md` (更新至v3.0.0)
+
+5. **剩余工作**
+   - 低优先级控制器（5个）待修复
+
+**影响范围**: 
+- 管理员功能（用户额外次数、指标监控、反馈管理）
+- MCP工具调用
+
+**测试建议**:
+```bash
+# 测试用户额外次数管理
+GET /api/admin/users/{userId}/usage
+POST /api/admin/users/{userId}/credits
+
+# 测试指标监控
+GET /api/admin/metrics/query
+GET /api/admin/metrics/daml-rag/health
+
+# 测试反馈管理
+GET /api/admin/feedback
+POST /api/admin/feedback/{id}/reply
+
+# 测试MCP工具
+POST /api/tools/execute
+POST /api/mcp/tools/search-exercises
+```
+
+---
 
 ### v2.102.0 (2026-01-17) - API响应规范合规性修复（中优先级） 🔧
 

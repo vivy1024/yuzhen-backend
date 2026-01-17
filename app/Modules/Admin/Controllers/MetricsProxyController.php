@@ -2,7 +2,7 @@
 
 namespace App\Modules\Admin\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Infrastructure\Http\Controllers\BaseController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,8 +12,11 @@ use Illuminate\Support\Facades\Log;
  * 
  * 代理查询Prometheus，避免直接暴露Prometheus端口
  * 支持PromQL查询和范围查询
+ * 
+ * @version v1.1.0
+ * @date 2026-01-17 (修复API响应规范合规性)
  */
-class MetricsProxyController extends Controller
+class MetricsProxyController extends BaseController
 {
     /**
      * Prometheus服务地址
@@ -41,18 +44,14 @@ class MetricsProxyController extends Controller
      */
     public function query(Request $request)
     {
-        $query = $request->input('query');
-        $time = $request->input('time');
-        
-        if (!$query) {
-            return response()->json([
-                'code' => 400,
-                'msg' => '缺少query参数',
-                'data' => null
-            ], 400);
-        }
-        
         try {
+            $query = $request->input('query');
+            $time = $request->input('time');
+            
+            if (!$query) {
+                return $this->fail('缺少query参数', 400);
+            }
+            
             $params = ['query' => $query];
             if ($time) {
                 $params['time'] = $time;
@@ -61,30 +60,13 @@ class MetricsProxyController extends Controller
             $response = Http::timeout(10)->get("{$this->prometheusUrl}/api/v1/query", $params);
             
             if ($response->successful()) {
-                return response()->json([
-                    'code' => 200,
-                    'msg' => 'success',
-                    'data' => $response->json()
-                ]);
+                return $this->success($response->json(), 'success');
             }
             
-            return response()->json([
-                'code' => $response->status(),
-                'msg' => 'Prometheus查询失败',
-                'data' => $response->json()
-            ], $response->status());
+            return $this->fail('Prometheus查询失败', $response->status(), $response->json());
             
         } catch (\Exception $e) {
-            Log::error('Prometheus查询异常', [
-                'query' => $query,
-                'error' => $e->getMessage()
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => 'Prometheus服务不可用: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            return $this->handleException($e, 'Prometheus查询');
         }
     }
     
@@ -98,20 +80,16 @@ class MetricsProxyController extends Controller
      */
     public function queryRange(Request $request)
     {
-        $query = $request->input('query');
-        $start = $request->input('start');
-        $end = $request->input('end');
-        $step = $request->input('step', '15s');
-        
-        if (!$query || !$start || !$end) {
-            return response()->json([
-                'code' => 400,
-                'msg' => '缺少必要参数(query, start, end)',
-                'data' => null
-            ], 400);
-        }
-        
         try {
+            $query = $request->input('query');
+            $start = $request->input('start');
+            $end = $request->input('end');
+            $step = $request->input('step', '15s');
+            
+            if (!$query || !$start || !$end) {
+                return $this->fail('缺少必要参数(query, start, end)', 400);
+            }
+            
             $response = Http::timeout(30)->get("{$this->prometheusUrl}/api/v1/query_range", [
                 'query' => $query,
                 'start' => $start,
@@ -120,30 +98,13 @@ class MetricsProxyController extends Controller
             ]);
             
             if ($response->successful()) {
-                return response()->json([
-                    'code' => 200,
-                    'msg' => 'success',
-                    'data' => $response->json()
-                ]);
+                return $this->success($response->json(), 'success');
             }
             
-            return response()->json([
-                'code' => $response->status(),
-                'msg' => 'Prometheus范围查询失败',
-                'data' => $response->json()
-            ], $response->status());
+            return $this->fail('Prometheus范围查询失败', $response->status(), $response->json());
             
         } catch (\Exception $e) {
-            Log::error('Prometheus范围查询异常', [
-                'query' => $query,
-                'error' => $e->getMessage()
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => 'Prometheus服务不可用: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            return $this->handleException($e, 'Prometheus范围查询');
         }
     }
     
@@ -157,62 +118,59 @@ class MetricsProxyController extends Controller
      */
     public function batchQuery(Request $request)
     {
-        $queries = $request->input('queries', []);
-        $start = $request->input('start');
-        $end = $request->input('end');
-        $step = $request->input('step', '15s');
-        
-        if (empty($queries)) {
-            return response()->json([
-                'code' => 400,
-                'msg' => '缺少queries参数',
-                'data' => null
-            ], 400);
-        }
-        
-        $results = [];
-        
-        foreach ($queries as $name => $query) {
-            try {
-                if ($start && $end) {
-                    // 范围查询
-                    $response = Http::timeout(15)->get("{$this->prometheusUrl}/api/v1/query_range", [
-                        'query' => $query,
-                        'start' => $start,
-                        'end' => $end,
-                        'step' => $step
-                    ]);
-                } else {
-                    // 即时查询
-                    $response = Http::timeout(10)->get("{$this->prometheusUrl}/api/v1/query", [
-                        'query' => $query
-                    ]);
-                }
-                
-                if ($response->successful()) {
-                    $results[$name] = [
-                        'status' => 'success',
-                        'data' => $response->json()
-                    ];
-                } else {
+        try {
+            $queries = $request->input('queries', []);
+            $start = $request->input('start');
+            $end = $request->input('end');
+            $step = $request->input('step', '15s');
+            
+            if (empty($queries)) {
+                return $this->fail('缺少queries参数', 400);
+            }
+            
+            $results = [];
+            
+            foreach ($queries as $name => $query) {
+                try {
+                    if ($start && $end) {
+                        // 范围查询
+                        $response = Http::timeout(15)->get("{$this->prometheusUrl}/api/v1/query_range", [
+                            'query' => $query,
+                            'start' => $start,
+                            'end' => $end,
+                            'step' => $step
+                        ]);
+                    } else {
+                        // 即时查询
+                        $response = Http::timeout(10)->get("{$this->prometheusUrl}/api/v1/query", [
+                            'query' => $query
+                        ]);
+                    }
+                    
+                    if ($response->successful()) {
+                        $results[$name] = [
+                            'status' => 'success',
+                            'data' => $response->json()
+                        ];
+                    } else {
+                        $results[$name] = [
+                            'status' => 'error',
+                            'error' => 'Query failed'
+                        ];
+                    }
+                } catch (\Exception $e) {
                     $results[$name] = [
                         'status' => 'error',
-                        'error' => 'Query failed'
+                        'error' => $e->getMessage()
                     ];
                 }
-            } catch (\Exception $e) {
-                $results[$name] = [
-                    'status' => 'error',
-                    'error' => $e->getMessage()
-                ];
             }
+            
+            return $this->success($results, 'success');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '批量查询');
         }
-        
-        return response()->json([
-            'code' => 200,
-            'msg' => 'success',
-            'data' => $results
-        ]);
     }
     
     /**
@@ -228,25 +186,13 @@ class MetricsProxyController extends Controller
             $response = Http::timeout(10)->get("{$this->damlRagUrl}/api/health");
             
             if ($response->successful()) {
-                return response()->json([
-                    'code' => 200,
-                    'msg' => 'success',
-                    'data' => $response->json()
-                ]);
+                return $this->success($response->json(), 'success');
             }
             
-            return response()->json([
-                'code' => $response->status(),
-                'msg' => 'DAML-RAG健康检查失败',
-                'data' => null
-            ], $response->status());
+            return $this->fail('DAML-RAG健康检查失败', $response->status());
             
         } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'msg' => 'DAML-RAG服务不可用: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            return $this->handleException($e, 'DAML-RAG健康检查');
         }
     }
     
@@ -263,25 +209,13 @@ class MetricsProxyController extends Controller
             $response = Http::timeout(10)->get("{$this->damlRagUrl}/api/health/metrics");
             
             if ($response->successful()) {
-                return response()->json([
-                    'code' => 200,
-                    'msg' => 'success',
-                    'data' => $response->json()
-                ]);
+                return $this->success($response->json(), 'success');
             }
             
-            return response()->json([
-                'code' => $response->status(),
-                'msg' => 'DAML-RAG指标获取失败',
-                'data' => null
-            ], $response->status());
+            return $this->fail('DAML-RAG指标获取失败', $response->status());
             
         } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'msg' => 'DAML-RAG服务不可用: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            return $this->handleException($e, 'DAML-RAG指标获取');
         }
     }
     
@@ -295,33 +229,21 @@ class MetricsProxyController extends Controller
      */
     public function damlRagStreaming(Request $request)
     {
-        $timeWindow = $request->input('time_window', 3600);
-        
         try {
+            $timeWindow = $request->input('time_window', 3600);
+            
             $response = Http::timeout(10)->get("{$this->damlRagUrl}/api/health/metrics/streaming", [
                 'time_window' => $timeWindow
             ]);
             
             if ($response->successful()) {
-                return response()->json([
-                    'code' => 200,
-                    'msg' => 'success',
-                    'data' => $response->json()
-                ]);
+                return $this->success($response->json(), 'success');
             }
             
-            return response()->json([
-                'code' => $response->status(),
-                'msg' => '流式监控获取失败',
-                'data' => null
-            ], $response->status());
+            return $this->fail('流式监控获取失败', $response->status());
             
         } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'msg' => 'DAML-RAG服务不可用: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '流式监控获取');
         }
     }
     
@@ -335,33 +257,21 @@ class MetricsProxyController extends Controller
      */
     public function damlRagStreamingRecent(Request $request)
     {
-        $limit = $request->input('limit', 100);
-        
         try {
+            $limit = $request->input('limit', 100);
+            
             $response = Http::timeout(10)->get("{$this->damlRagUrl}/api/health/metrics/streaming/recent", [
                 'limit' => $limit
             ]);
             
             if ($response->successful()) {
-                return response()->json([
-                    'code' => 200,
-                    'msg' => 'success',
-                    'data' => $response->json()
-                ]);
+                return $this->success($response->json(), 'success');
             }
             
-            return response()->json([
-                'code' => $response->status(),
-                'msg' => '流式会话记录获取失败',
-                'data' => null
-            ], $response->status());
+            return $this->fail('流式会话记录获取失败', $response->status());
             
         } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'msg' => 'DAML-RAG服务不可用: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '流式会话记录获取');
         }
     }
     
