@@ -93,13 +93,19 @@ abstract class BaseController extends Controller
                 ApiResponse::forbidden('权限不足，无法执行此操作'),
             
             $e instanceof \Illuminate\Database\QueryException => 
-                ApiResponse::error(
-                    app()->environment('production') ? '数据操作失败' : $e->getMessage(),
-                    ApiResponse::INTERNAL_SERVER_ERROR
-                ),
+                $this->handleDatabaseException($e),
             
             $e instanceof \Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException => 
                 ApiResponse::tooManyRequests('请求过于频繁，请稍后重试'),
+            
+            $e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException => 
+                ApiResponse::notFound('请求的页面不存在'),
+            
+            $e instanceof \Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException => 
+                ApiResponse::fail('请求方法不允许', ApiResponse::BAD_REQUEST),
+            
+            $e instanceof \Symfony\Component\HttpKernel\Exception\HttpException => 
+                $this->handleHttpException($e),
             
             default => app()->environment('production')
                 ? ApiResponse::error('服务暂时不可用，请稍后重试')
@@ -108,6 +114,64 @@ abstract class BaseController extends Controller
                     ApiResponse::INTERNAL_SERVER_ERROR
                 )
         };
+    }
+    
+    /**
+     * 处理数据库异常
+     */
+    protected function handleDatabaseException(\Illuminate\Database\QueryException $e): JsonResponse
+    {
+        // 在生产环境下，根据错误代码返回用户友好的消息
+        if (app()->environment('production')) {
+            $errorCode = $e->errorInfo[1] ?? 0;
+            
+            return match($errorCode) {
+                // 唯一键冲突
+                1062 => ApiResponse::fail('数据已存在，请勿重复提交', ApiResponse::UNPROCESSABLE_ENTITY),
+                
+                // 外键约束失败
+                1451 => ApiResponse::fail('该数据正在被使用，无法删除', ApiResponse::UNPROCESSABLE_ENTITY),
+                1452 => ApiResponse::fail('关联数据不存在，操作失败', ApiResponse::UNPROCESSABLE_ENTITY),
+                
+                // 连接失败
+                2002, 2003, 2006 => ApiResponse::error('数据库连接失败，请稍后重试'),
+                
+                // 默认数据库错误
+                default => ApiResponse::error('数据操作失败，请稍后重试')
+            };
+        }
+        
+        // 开发环境返回详细错误
+        return ApiResponse::error($e->getMessage(), ApiResponse::INTERNAL_SERVER_ERROR);
+    }
+    
+    /**
+     * 处理HTTP异常
+     */
+    protected function handleHttpException(\Symfony\Component\HttpKernel\Exception\HttpException $e): JsonResponse
+    {
+        $statusCode = $e->getStatusCode();
+        
+        $message = match($statusCode) {
+            400 => '请求参数错误',
+            401 => '未授权，请先登录',
+            403 => '权限不足，无法访问',
+            404 => '请求的资源不存在',
+            405 => '请求方法不允许',
+            408 => '请求超时，请重试',
+            413 => '请求数据过大',
+            422 => '数据验证失败',
+            429 => '请求过于频繁，请稍后重试',
+            500 => '服务器错误，请稍后重试',
+            502 => '网关错误，请稍后重试',
+            503 => '服务暂时不可用，请稍后重试',
+            504 => '网关超时，请稍后重试',
+            default => app()->environment('production') 
+                ? '服务暂时不可用，请稍后重试'
+                : $e->getMessage()
+        };
+        
+        return ApiResponse::fail($message, $statusCode);
     }
     
     /**
