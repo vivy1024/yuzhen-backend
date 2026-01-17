@@ -2,7 +2,7 @@
 
 namespace App\Modules\Admin\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Infrastructure\Http\Controllers\BaseController;
 use App\Modules\Membership\Services\UsageTrackingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -14,11 +14,11 @@ use Illuminate\Support\Facades\Log;
  * 
  * 管理员可以为用户添加额外的AI对话次数（打赏奖励）
  * 
- * @version v1.0.0
- * @date 2026-01-11
+ * @version v1.1.0
+ * @date 2026-01-17 (修复API响应规范合规性)
  * @author 薛小川
  */
-class UserCreditsController extends Controller
+class UserCreditsController extends BaseController
 {
     protected UsageTrackingService $usageService;
     
@@ -38,35 +38,20 @@ class UserCreditsController extends Controller
             // 检查用户是否存在
             $user = DB::table('users')->find($userId);
             if (!$user) {
-                return response()->json([
-                    'code' => 404,
-                    'message' => '用户不存在'
-                ], 404);
+                return $this->fail('用户不存在', 404);
             }
             
             $stats = $this->usageService->getUserUsageStats($userId);
             
-            return response()->json([
-                'code' => 200,
-                'message' => '获取成功',
-                'data' => [
-                    'user_id' => $userId,
-                    'nickname' => $user->nickname,
-                    'email' => $user->email,
-                    'usage' => $stats
-                ]
-            ]);
+            return $this->success([
+                'user_id' => $userId,
+                'nickname' => $user->nickname,
+                'email' => $user->email,
+                'usage' => $stats
+            ], '获取成功');
             
         } catch (\Exception $e) {
-            Log::error("获取用户用量失败", [
-                'user_id' => $userId,
-                'error' => $e->getMessage()
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'message' => '获取失败: ' . $e->getMessage()
-            ], 500);
+            return $this->handleException($e, '获取用户用量');
         }
     }
     
@@ -95,10 +80,7 @@ class UserCreditsController extends Controller
             // 检查用户是否存在
             $user = DB::table('users')->find($userId);
             if (!$user) {
-                return response()->json([
-                    'code' => 404,
-                    'message' => '用户不存在'
-                ], 404);
+                return $this->fail('用户不存在', 404);
             }
             
             $dagCredits = $validated['dag_credits'] ?? 0;
@@ -106,10 +88,7 @@ class UserCreditsController extends Controller
             $reason = $validated['reason'] ?? '管理员添加';
             
             if ($dagCredits == 0 && $agentCredits == 0) {
-                return response()->json([
-                    'code' => 400,
-                    'message' => '请至少添加一种类型的次数'
-                ], 400);
+                return $this->fail('请至少添加一种类型的次数', 400);
             }
             
             // 添加额外次数
@@ -121,10 +100,7 @@ class UserCreditsController extends Controller
             );
             
             if (!$success) {
-                return response()->json([
-                    'code' => 500,
-                    'message' => '添加失败'
-                ], 500);
+                return $this->fail('添加失败', 500);
             }
             
             // 获取更新后的统计
@@ -138,29 +114,17 @@ class UserCreditsController extends Controller
                 'reason' => $reason
             ]);
             
-            return response()->json([
-                'code' => 200,
-                'message' => '添加成功',
-                'data' => [
-                    'user_id' => $userId,
-                    'added' => [
-                        'dag_credits' => $dagCredits,
-                        'agent_credits' => $agentCredits
-                    ],
-                    'current_usage' => $stats
-                ]
-            ]);
+            return $this->success([
+                'user_id' => $userId,
+                'added' => [
+                    'dag_credits' => $dagCredits,
+                    'agent_credits' => $agentCredits
+                ],
+                'current_usage' => $stats
+            ], '添加成功');
             
         } catch (\Exception $e) {
-            Log::error("添加额外次数失败", [
-                'user_id' => $userId,
-                'error' => $e->getMessage()
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'message' => '添加失败: ' . $e->getMessage()
-            ], 500);
+            return $this->handleException($e, '添加额外次数');
         }
     }
     
@@ -193,10 +157,7 @@ class UserCreditsController extends Controller
             $reason = $validated['reason'] ?? '批量添加';
             
             if ($dagCredits == 0 && $agentCredits == 0) {
-                return response()->json([
-                    'code' => 400,
-                    'message' => '请至少添加一种类型的次数'
-                ], 400);
+                return $this->fail('请至少添加一种类型的次数', 400);
             }
             
             $successCount = 0;
@@ -226,26 +187,15 @@ class UserCreditsController extends Controller
                 'reason' => $reason
             ]);
             
-            return response()->json([
-                'code' => 200,
-                'message' => "成功为 {$successCount} 个用户添加额外次数",
-                'data' => [
-                    'total' => count($validated['user_ids']),
-                    'success' => $successCount,
-                    'failed' => count($failedUsers),
-                    'failed_users' => $failedUsers
-                ]
-            ]);
+            return $this->success([
+                'total' => count($validated['user_ids']),
+                'success' => $successCount,
+                'failed' => count($failedUsers),
+                'failed_users' => $failedUsers
+            ], "成功为 {$successCount} 个用户添加额外次数");
             
         } catch (\Exception $e) {
-            Log::error("批量添加额外次数失败", [
-                'error' => $e->getMessage()
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'message' => '批量添加失败: ' . $e->getMessage()
-            ], 500);
+            return $this->handleException($e, '批量添加额外次数');
         }
     }
     
@@ -256,23 +206,24 @@ class UserCreditsController extends Controller
      */
     public function getCreditsConfig(): JsonResponse
     {
-        $config = config('membership.donation_rewards', [
-            '5' => 50,
-            '10' => 120,
-            '20' => 300,
-            '50' => 1000
-        ]);
-        
-        return response()->json([
-            'code' => 200,
-            'message' => '获取成功',
-            'data' => [
+        try {
+            $config = config('membership.donation_rewards', [
+                '5' => 50,
+                '10' => 120,
+                '20' => 300,
+                '50' => 1000
+            ]);
+            
+            return $this->success([
                 'donation_rewards' => $config,
                 'default_limits' => [
                     'dag_per_day' => UsageTrackingService::DEFAULT_DAG_LIMIT,
                     'agent_per_day' => UsageTrackingService::DEFAULT_AGENT_LIMIT
                 ]
-            ]
-        ]);
+            ], '获取成功');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '获取打赏奖励配置');
+        }
     }
 }
