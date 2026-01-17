@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Infrastructure\Http\Controllers\BaseController;
 use App\Models\ChatTopic;
 use App\Models\ChatSession;
 use App\Models\ChatMessage;
@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
  * @date 2026-01-11
  * @requirements 1.1-1.6 对话历史与上下文管理
  */
-class ChatTopicController extends Controller
+class ChatTopicController extends BaseController
 {
     /**
      * 获取用户对话历史
@@ -81,27 +81,14 @@ class ChatTopicController extends Controller
                 ];
             });
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => [
-                    'total' => $total,
-                    'limit' => $limit,
-                    'offset' => $offset,
-                    'history' => $history,
-                ]
-            ]);
+            return $this->success([
+                'total' => $total,
+                'limit' => $limit,
+                'offset' => $offset,
+                'history' => $history,
+            ], '获取成功');
         } catch (\Exception $e) {
-            Log::error('获取对话历史失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取对话历史失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取对话历史');
         }
     }
     
@@ -178,28 +165,14 @@ class ChatTopicController extends Controller
                 ];
             })->filter()->values();
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => [
-                    'total' => $total,
-                    'limit' => $limit,
-                    'offset' => $offset,
-                    'sessions' => $sessions,
-                ]
-            ]);
+            return $this->success([
+                'total' => $total,
+                'limit' => $limit,
+                'offset' => $offset,
+                'sessions' => $sessions,
+            ], '获取成功');
         } catch (\Exception $e) {
-            Log::error('获取会话列表失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()->id ?? null,
-                'trace' => $e->getTraceAsString(),
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取会话列表失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取会话列表');
         }
     }
     
@@ -225,11 +198,7 @@ class ChatTopicController extends Controller
                 ->get();
             
             if ($conversations->isEmpty()) {
-                return response()->json([
-                    'code' => 404,
-                    'msg' => '会话不存在',
-                    'data' => null
-                ], 404);
+                return $this->fail('会话不存在', 404);
             }
             
             // 格式化为消息列表
@@ -258,30 +227,16 @@ class ChatTopicController extends Controller
             $firstConv = $conversations->first();
             $lastConv = $conversations->last();
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => [
-                    'sessionId' => $sessionId,
-                    'topicId' => $firstConv->topic_id,
-                    'messageCount' => count($messages),
-                    'messages' => $messages,
-                    'createdAt' => $firstConv->created_at->toIso8601String(),
-                    'updatedAt' => $lastConv->updated_at->toIso8601String(),
-                ]
-            ]);
+            return $this->success([
+                'sessionId' => $sessionId,
+                'topicId' => $firstConv->topic_id,
+                'messageCount' => count($messages),
+                'messages' => $messages,
+                'createdAt' => $firstConv->created_at->toIso8601String(),
+                'updatedAt' => $lastConv->updated_at->toIso8601String(),
+            ], '获取成功');
         } catch (\Exception $e) {
-            Log::error('获取会话详情失败', [
-                'error' => $e->getMessage(),
-                'session_id' => $sessionId,
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取会话详情失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取会话详情');
         }
     }
     
@@ -306,11 +261,7 @@ class ChatTopicController extends Controller
                 ->count();
             
             if ($count === 0) {
-                return response()->json([
-                    'code' => 404,
-                    'msg' => '会话不存在',
-                    'data' => null
-                ], 404);
+                return $this->fail('会话不存在', 404);
             }
             
             // 删除会话的所有记录
@@ -324,26 +275,12 @@ class ChatTopicController extends Controller
                 'deleted_count' => $deleted,
             ]);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '删除成功',
-                'data' => [
-                    'sessionId' => $sessionId,
-                    'deletedCount' => $deleted,
-                ]
-            ]);
+            return $this->success([
+                'sessionId' => $sessionId,
+                'deletedCount' => $deleted,
+            ], '删除成功');
         } catch (\Exception $e) {
-            Log::error('删除会话失败', [
-                'error' => $e->getMessage(),
-                'session_id' => $sessionId,
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '删除会话失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '删除会话');
         }
     }
     /**
@@ -360,32 +297,19 @@ class ChatTopicController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => $topics->map(function ($topic) {
-                    return [
-                        'id' => (string) $topic->id,
-                        'name' => $topic->name,
-                        'createdAt' => $topic->created_at->toIso8601String(),
-                        'updatedAt' => $topic->updated_at->toIso8601String(),
-                        'messageCount' => $topic->message_count,
-                        'lastMessage' => $topic->last_message,
-                        'lastMessageAt' => $topic->last_message_at?->toIso8601String(),
-                    ];
-                })
-            ]);
+            return $this->success($topics->map(function ($topic) {
+                return [
+                    'id' => (string) $topic->id,
+                    'name' => $topic->name,
+                    'createdAt' => $topic->created_at->toIso8601String(),
+                    'updatedAt' => $topic->updated_at->toIso8601String(),
+                    'messageCount' => $topic->message_count,
+                    'lastMessage' => $topic->last_message,
+                    'lastMessageAt' => $topic->last_message_at?->toIso8601String(),
+                ];
+            }), '获取成功');
         } catch (\Exception $e) {
-            Log::error('获取话题列表失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取话题列表失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取话题列表');
         }
     }
     
@@ -414,34 +338,15 @@ class ChatTopicController extends Controller
                 'name' => $topic->name,
             ]);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '创建成功',
-                'data' => [
-                    'id' => (string) $topic->id,
-                    'name' => $topic->name,
-                    'createdAt' => $topic->created_at->toIso8601String(),
-                    'updatedAt' => $topic->updated_at->toIso8601String(),
-                    'messageCount' => 0,
-                ]
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'code' => 422,
-                'msg' => '参数验证失败',
-                'data' => $e->errors()
-            ], 422);
+            return $this->success([
+                'id' => (string) $topic->id,
+                'name' => $topic->name,
+                'createdAt' => $topic->created_at->toIso8601String(),
+                'updatedAt' => $topic->updated_at->toIso8601String(),
+                'messageCount' => 0,
+            ], '创建成功');
         } catch (\Exception $e) {
-            Log::error('创建话题失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '创建话题失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '创建话题');
         }
     }
     
@@ -472,11 +377,7 @@ class ChatTopicController extends Controller
                 ]
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'code' => 404,
-                'msg' => '话题不存在',
-                'data' => null
-            ], 404);
+            return $this->fail('话题不存在', 404);
         } catch (\Exception $e) {
             Log::error('获取话题详情失败', [
                 'error' => $e->getMessage(),
@@ -484,11 +385,7 @@ class ChatTopicController extends Controller
                 'user_id' => $request->user()->id ?? null,
             ]);
             
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取话题详情失败',
-                'data' => null
-            ], 500);
+            return $this->fail('获取话题详情失败', 500);
         }
     }
     
@@ -527,17 +424,10 @@ class ChatTopicController extends Controller
                 ]
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'code' => 404,
-                'msg' => '话题不存在',
-                'data' => null
-            ], 404);
+            return $this->fail('话题不存在', 404);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'code' => 422,
-                'msg' => '参数验证失败',
-                'data' => $e->errors()
-            ], 422);
+            return $this->fail('参数验证失败', 422, $e->errors()
+            );
         } catch (\Exception $e) {
             Log::error('更新话题失败', [
                 'error' => $e->getMessage(),
@@ -545,11 +435,7 @@ class ChatTopicController extends Controller
                 'user_id' => $request->user()->id ?? null,
             ]);
             
-            return response()->json([
-                'code' => 500,
-                'msg' => '更新话题失败',
-                'data' => null
-            ], 500);
+            return $this->fail('更新话题失败', 500);
         }
     }
     
@@ -572,17 +458,10 @@ class ChatTopicController extends Controller
                 'user_id' => $user->id,
             ]);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '删除成功',
-                'data' => null
-            ]);
+            return $this->success(null
+            , '删除成功');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'code' => 404,
-                'msg' => '话题不存在',
-                'data' => null
-            ], 404);
+            return $this->fail('话题不存在', 404);
         } catch (\Exception $e) {
             Log::error('删除话题失败', [
                 'error' => $e->getMessage(),
@@ -590,11 +469,7 @@ class ChatTopicController extends Controller
                 'user_id' => $request->user()->id ?? null,
             ]);
             
-            return response()->json([
-                'code' => 500,
-                'msg' => '删除话题失败',
-                'data' => null
-            ], 500);
+            return $this->fail('删除话题失败', 500);
         }
     }
     
@@ -632,11 +507,7 @@ class ChatTopicController extends Controller
                 })
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'code' => 404,
-                'msg' => '话题不存在',
-                'data' => null
-            ], 404);
+            return $this->fail('话题不存在', 404);
         } catch (\Exception $e) {
             Log::error('获取话题消息失败', [
                 'error' => $e->getMessage(),
@@ -644,11 +515,7 @@ class ChatTopicController extends Controller
                 'user_id' => $request->user()->id ?? null,
             ]);
             
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取话题消息失败',
-                'data' => null
-            ], 500);
+            return $this->fail('获取话题消息失败', 500);
         }
     }
     
@@ -717,17 +584,10 @@ class ChatTopicController extends Controller
                 ]
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'code' => 404,
-                'msg' => '话题不存在',
-                'data' => null
-            ], 404);
+            return $this->fail('话题不存在', 404);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'code' => 422,
-                'msg' => '参数验证失败',
-                'data' => $e->errors()
-            ], 422);
+            return $this->fail('参数验证失败', 422, $e->errors()
+            );
         } catch (\Exception $e) {
             Log::error('保存消息失败', [
                 'error' => $e->getMessage(),
@@ -735,11 +595,7 @@ class ChatTopicController extends Controller
                 'user_id' => $request->user()->id ?? null,
             ]);
             
-            return response()->json([
-                'code' => 500,
-                'msg' => '保存消息失败',
-                'data' => null
-            ], 500);
+            return $this->fail('保存消息失败', 500);
         }
     }
     
@@ -811,11 +667,7 @@ class ChatTopicController extends Controller
                 ]
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'code' => 404,
-                'msg' => '话题不存在',
-                'data' => null
-            ], 404);
+            return $this->fail('话题不存在', 404);
         } catch (\Exception $e) {
             Log::error('同步消息失败', [
                 'error' => $e->getMessage(),
@@ -823,11 +675,7 @@ class ChatTopicController extends Controller
                 'user_id' => $request->user()->id ?? null,
             ]);
             
-            return response()->json([
-                'code' => 500,
-                'msg' => '同步消息失败',
-                'data' => null
-            ], 500);
+            return $this->fail('同步消息失败', 500);
         }
     }
     

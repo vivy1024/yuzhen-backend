@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Http\Controllers\Controller;
+use App\Infrastructure\Http\Controllers\BaseController;
 use App\Models\Complaint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +16,7 @@ use Illuminate\Validation\Rule;
  * 处理用户投诉的提交、查询和管理
  * Requirements: 16.5
  */
-class ComplaintController extends Controller
+class ComplaintController extends BaseController
 {
     /**
      * 提交投诉
@@ -49,27 +49,15 @@ class ComplaintController extends Controller
                 'type' => $validated['type'],
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => '投诉已提交，我们将在48小时内处理',
-                'data' => [
-                    'id' => $complaint->id,
-                    'status' => $complaint->status,
-                    'status_label' => $complaint->status_label,
-                    'created_at' => $complaint->created_at->toIso8601String(),
-                ],
-            ], 201);
+            return $this->success([
+                'id' => $complaint->id,
+                'status' => $complaint->status,
+                'status_label' => $complaint->status_label,
+                'created_at' => $complaint->created_at->toIso8601String(),
+            ], '投诉已提交，我们将在48小时内处理', 201);
 
         } catch (\Exception $e) {
-            Log::error('投诉提交失败', [
-                'user_id' => Auth::id(),
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => '投诉提交失败，请稍后重试',
-            ], 500);
+            return $this->handleException($e, '投诉提交');
         }
     }
 
@@ -92,9 +80,8 @@ class ComplaintController extends Controller
 
         $complaints = $query->paginate($perPage);
 
-        return response()->json([
-            'success' => true,
-            'data' => $complaints->map(function ($complaint) {
+        return $this->success([
+            'items' => $complaints->map(function ($complaint) {
                 return [
                     'id' => $complaint->id,
                     'type' => $complaint->type,
@@ -113,7 +100,7 @@ class ComplaintController extends Controller
                 'per_page' => $complaints->perPage(),
                 'total' => $complaints->total(),
             ],
-        ]);
+        ], '获取成功');
     }
 
     /**
@@ -126,22 +113,19 @@ class ComplaintController extends Controller
         $complaint = Complaint::where('user_id', Auth::id())
             ->findOrFail($id);
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'id' => $complaint->id,
-                'type' => $complaint->type,
-                'type_label' => $complaint->type_label,
-                'content' => $complaint->content,
-                'screenshot_url' => $complaint->screenshot_url,
-                'status' => $complaint->status,
-                'status_label' => $complaint->status_label,
-                'handler_response' => $complaint->handler_response,
-                'created_at' => $complaint->created_at->toIso8601String(),
-                'handled_at' => $complaint->handled_at?->toIso8601String(),
-                'chat_session_id' => $complaint->chat_session_id,
-            ],
-        ]);
+        return $this->success([
+            'id' => $complaint->id,
+            'type' => $complaint->type,
+            'type_label' => $complaint->type_label,
+            'content' => $complaint->content,
+            'screenshot_url' => $complaint->screenshot_url,
+            'status' => $complaint->status,
+            'status_label' => $complaint->status_label,
+            'handler_response' => $complaint->handler_response,
+            'created_at' => $complaint->created_at->toIso8601String(),
+            'handled_at' => $complaint->handled_at?->toIso8601String(),
+            'chat_session_id' => $complaint->chat_session_id,
+        ], '获取成功');
     }
 
     /**
@@ -158,10 +142,7 @@ class ComplaintController extends Controller
             ];
         })->values();
 
-        return response()->json([
-            'success' => true,
-            'data' => $types,
-        ]);
+        return $this->success($types, '获取成功');
     }
 
     /**
@@ -177,10 +158,7 @@ class ComplaintController extends Controller
 
         $complaint->update(['status' => Complaint::STATUS_CLOSED]);
 
-        return response()->json([
-            'success' => true,
-            'message' => '投诉已撤销',
-        ]);
+        return $this->success(null, '投诉已撤销');
     }
 
     /**
@@ -209,9 +187,8 @@ class ComplaintController extends Controller
 
         $complaints = $query->paginate($perPage);
 
-        return response()->json([
-            'success' => true,
-            'data' => $complaints->map(function ($complaint) {
+        return $this->success([
+            'items' => $complaints->map(function ($complaint) {
                 return [
                     'id' => $complaint->id,
                     'user' => [
@@ -238,7 +215,7 @@ class ComplaintController extends Controller
                 'processing' => Complaint::processing()->count(),
                 'handled' => Complaint::handled()->count(),
             ],
-        ]);
+        ], '获取成功');
     }
 
     /**
@@ -276,14 +253,10 @@ class ComplaintController extends Controller
             'handler' => 'admin',
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => '投诉已处理',
-            'data' => [
-                'id' => $complaint->id,
-                'status' => $complaint->status,
-                'status_label' => $complaint->status_label,
-            ],
-        ]);
+        return $this->success([
+            'id' => $complaint->id,
+            'status' => $complaint->status,
+            'status_label' => $complaint->status_label,
+        ], '投诉已处理');
     }
 }

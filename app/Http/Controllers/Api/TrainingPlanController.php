@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Infrastructure\Http\Controllers\BaseController;
 use App\Models\TrainingPlan;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
  * @version 1.0.0
  * @date 2025-01-02
  */
-class TrainingPlanController extends Controller
+class TrainingPlanController extends BaseController
 {
     /**
      * 导入训练计划
@@ -68,36 +68,17 @@ class TrainingPlanController extends Controller
                     'chat_session_id' => $plan->chat_session_id,
                 ]);
                 
-                return response()->json([
-                    'code' => 200,
-                    'msg' => '导入成功',
-                    'data' => [
-                        'id' => $plan->id,
-                        'name' => $plan->name,
-                        'createdAt' => $plan->created_at->toIso8601String(),
-                    ]
-                ]);
+                return $this->success([
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'createdAt' => $plan->created_at->toIso8601String(),
+                ], '导入成功');
             } catch (\Exception $e) {
                 DB::rollBack();
                 throw $e;
             }
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'code' => 422,
-                'msg' => '参数验证失败',
-                'data' => $e->errors()
-            ], 422);
         } catch (\Exception $e) {
-            Log::error('导入训练计划失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '导入训练计划失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '导入训练计划');
         }
     }
     
@@ -134,38 +115,25 @@ class TrainingPlanController extends Controller
             
             $plans = $query->orderBy('created_at', 'desc')->get();
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => $plans->map(function ($plan) {
-                    return [
-                        'id' => $plan->id,
-                        'name' => $plan->name,
-                        'description' => $plan->description,
-                        'weeks' => $plan->duration_weeks,
-                        'frequency' => $plan->workouts_per_week,
-                        'difficulty' => $plan->difficulty,
-                        'goal' => $plan->goal,
-                        'isActive' => $plan->is_active,
-                        'type' => $plan->type,
-                        'exerciseCount' => is_array($plan->exercises) ? count($plan->exercises) : 0,
-                        'createdAt' => $plan->created_at->toIso8601String(),
-                        'startedAt' => $plan->started_at?->toIso8601String(),
-                        'completedAt' => $plan->completed_at?->toIso8601String(),
-                    ];
-                })
-            ]);
+            return $this->success($plans->map(function ($plan) {
+                return [
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'description' => $plan->description,
+                    'weeks' => $plan->duration_weeks,
+                    'frequency' => $plan->workouts_per_week,
+                    'difficulty' => $plan->difficulty,
+                    'goal' => $plan->goal,
+                    'isActive' => $plan->is_active,
+                    'type' => $plan->type,
+                    'exerciseCount' => is_array($plan->exercises) ? count($plan->exercises) : 0,
+                    'createdAt' => $plan->created_at->toIso8601String(),
+                    'startedAt' => $plan->started_at?->toIso8601String(),
+                    'completedAt' => $plan->completed_at?->toIso8601String(),
+                ];
+            }), '获取成功');
         } catch (\Exception $e) {
-            Log::error('获取训练计划列表失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取训练计划列表失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取训练计划列表');
         }
     }
     
@@ -182,46 +150,26 @@ class TrainingPlanController extends Controller
                 ->with('chatSession')
                 ->findOrFail($id);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => [
-                    'id' => $plan->id,
-                    'name' => $plan->name,
-                    'description' => $plan->description,
-                    'weeks' => $plan->duration_weeks,
-                    'frequency' => $plan->workouts_per_week,
-                    'exercises' => $plan->exercises,
-                    'targetMuscles' => $plan->target_muscles,
-                    'safetyNotes' => $plan->safety_notes,
-                    'difficulty' => $plan->difficulty,
-                    'goal' => $plan->goal,
-                    'isActive' => $plan->is_active,
-                    'type' => $plan->type,
-                    'createdAt' => $plan->created_at->toIso8601String(),
-                    'startedAt' => $plan->started_at?->toIso8601String(),
-                    'completedAt' => $plan->completed_at?->toIso8601String(),
-                    'chatSessionId' => $plan->chat_session_id,
-                ]
-            ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'code' => 404,
-                'msg' => '训练计划不存在',
-                'data' => null
-            ], 404);
+            return $this->success([
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'description' => $plan->description,
+                'weeks' => $plan->duration_weeks,
+                'frequency' => $plan->workouts_per_week,
+                'exercises' => $plan->exercises,
+                'targetMuscles' => $plan->target_muscles,
+                'safetyNotes' => $plan->safety_notes,
+                'difficulty' => $plan->difficulty,
+                'goal' => $plan->goal,
+                'isActive' => $plan->is_active,
+                'type' => $plan->type,
+                'createdAt' => $plan->created_at->toIso8601String(),
+                'startedAt' => $plan->started_at?->toIso8601String(),
+                'completedAt' => $plan->completed_at?->toIso8601String(),
+                'chatSessionId' => $plan->chat_session_id,
+            ], '获取成功');
         } catch (\Exception $e) {
-            Log::error('获取训练计划详情失败', [
-                'error' => $e->getMessage(),
-                'plan_id' => $id,
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取训练计划详情失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取训练计划详情');
         }
     }
     
@@ -252,39 +200,13 @@ class TrainingPlanController extends Controller
                 'user_id' => $user->id,
             ]);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '更新成功',
-                'data' => [
-                    'id' => $plan->id,
-                    'name' => $plan->name,
-                    'updatedAt' => $plan->updated_at->toIso8601String(),
-                ]
-            ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'code' => 404,
-                'msg' => '训练计划不存在',
-                'data' => null
-            ], 404);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'code' => 422,
-                'msg' => '参数验证失败',
-                'data' => $e->errors()
-            ], 422);
+            return $this->success([
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'updatedAt' => $plan->updated_at->toIso8601String(),
+            ], '更新成功');
         } catch (\Exception $e) {
-            Log::error('更新训练计划失败', [
-                'error' => $e->getMessage(),
-                'plan_id' => $id,
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '更新训练计划失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '更新训练计划');
         }
     }
     
@@ -307,29 +229,9 @@ class TrainingPlanController extends Controller
                 'user_id' => $user->id,
             ]);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '删除成功',
-                'data' => null
-            ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'code' => 404,
-                'msg' => '训练计划不存在',
-                'data' => null
-            ], 404);
+            return $this->success(null, '删除成功');
         } catch (\Exception $e) {
-            Log::error('删除训练计划失败', [
-                'error' => $e->getMessage(),
-                'plan_id' => $id,
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '删除训练计划失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '删除训练计划');
         }
     }
 }

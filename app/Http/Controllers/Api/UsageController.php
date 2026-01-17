@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Infrastructure\Http\Controllers\BaseController;
 use App\Services\UsageService;
 use App\Services\CreditService;
 use Illuminate\Http\Request;
@@ -20,12 +20,12 @@ use Illuminate\Support\Facades\Log;
  * - POST /api/usage/check     - 检查是否可执行查询
  * - POST /api/usage/increment - 增加用量计数
  * 
- * @version v1.0.0
- * @date 2026-01-11
+ * @version v1.1.0
+ * @date 2026-01-17
  * @author 薛小川
  * @requirements 4.1-4.6
  */
-class UsageController extends Controller
+class UsageController extends BaseController
 {
     /**
      * @var UsageService
@@ -76,11 +76,7 @@ class UsageController extends Controller
             $user = $request->user();
             
             if (!$user) {
-                return response()->json([
-                    'code' => 401,
-                    'msg' => '请先登录',
-                    'data' => null
-                ], 401);
+                return $this->fail('请先登录', 401);
             }
             
             $usage = $this->usageService->getTodayUsage($user->id);
@@ -88,26 +84,13 @@ class UsageController extends Controller
             // 检查是否有低用量警告
             $warning = $this->usageService->checkLowUsageWarning($user->id);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => array_merge($usage, [
-                    'has_warning' => $warning['has_warning'],
-                    'warnings' => $warning['warnings'],
-                ])
-            ]);
+            return $this->success(array_merge($usage, [
+                'has_warning' => $warning['has_warning'],
+                'warnings' => $warning['warnings'],
+            ]), '获取成功');
             
         } catch (\Exception $e) {
-            Log::error('获取今日用量失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取用量统计失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取今日用量');
         }
     }
 
@@ -135,32 +118,15 @@ class UsageController extends Controller
             $user = $request->user();
             
             if (!$user) {
-                return response()->json([
-                    'code' => 401,
-                    'msg' => '请先登录',
-                    'data' => null
-                ], 401);
+                return $this->fail('请先登录', 401);
             }
             
             $credits = $this->creditService->getCredits($user->id);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => $credits
-            ]);
+            return $this->success($credits, '获取成功');
             
         } catch (\Exception $e) {
-            Log::error('获取额度余额失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取额度余额失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取额度余额');
         }
     }
 
@@ -198,43 +164,23 @@ class UsageController extends Controller
             $user = $request->user();
             
             if (!$user) {
-                return response()->json([
-                    'code' => 401,
-                    'msg' => '请先登录',
-                    'data' => null
-                ], 401);
+                return $this->fail('请先登录', 401);
             }
             
             $mode = strtolower($validated['mode']);
             $result = $this->usageService->canExecuteQuery($user->id, $mode);
             
-            // 根据是否允许返回不同的HTTP状态码
-            $httpCode = $result['allowed'] ? 200 : 429;
-            $code = $result['allowed'] ? 200 : 429;
-            
-            return response()->json([
-                'code' => $code,
-                'msg' => $result['allowed'] ? '检查通过' : '用量已达上限',
-                'data' => $result
-            ], $httpCode);
+            // 根据是否允许返回不同的状态码
+            if ($result['allowed']) {
+                return $this->success($result, '检查通过');
+            } else {
+                return $this->fail('用量已达上限', 429, $result, 429);
+            }
             
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'code' => 422,
-                'msg' => '参数验证失败',
-                'data' => $e->errors()
-            ], 422);
+            return $this->fail('参数验证失败', 422, $e->errors());
         } catch (\Exception $e) {
-            Log::error('检查用量失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '检查用量失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '检查用量');
         }
     }
 
@@ -275,11 +221,7 @@ class UsageController extends Controller
             $user = $request->user();
             
             if (!$user) {
-                return response()->json([
-                    'code' => 401,
-                    'msg' => '请先登录',
-                    'data' => null
-                ], 401);
+                return $this->fail('请先登录', 401);
             }
             
             $mode = strtolower($validated['mode']);
@@ -287,11 +229,7 @@ class UsageController extends Controller
             
             if (!$result['success']) {
                 // 用量增加失败（可能是额度不足）
-                return response()->json([
-                    'code' => 429,
-                    'msg' => $result['message'],
-                    'data' => $result
-                ], 429);
+                return $this->fail($result['message'], 429, $result, 429);
             }
             
             Log::info('用量计数已增加', [
@@ -301,29 +239,12 @@ class UsageController extends Controller
                 'used_credits' => $result['used_credits'],
             ]);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '计数成功',
-                'data' => $result
-            ]);
+            return $this->success($result, '计数成功');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'code' => 422,
-                'msg' => '参数验证失败',
-                'data' => $e->errors()
-            ], 422);
+            return $this->fail('参数验证失败', 422, $e->errors());
         } catch (\Exception $e) {
-            Log::error('增加用量计数失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '增加用量计数失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '增加用量计数');
         }
     }
 
@@ -361,39 +282,18 @@ class UsageController extends Controller
             $user = $request->user();
             
             if (!$user) {
-                return response()->json([
-                    'code' => 401,
-                    'msg' => '请先登录',
-                    'data' => null
-                ], 401);
+                return $this->fail('请先登录', 401);
             }
             
             $days = $validated['days'] ?? 30;
             $history = $this->usageService->getUsageHistory($user->id, $days);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => $history
-            ]);
+            return $this->success($history, '获取成功');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'code' => 422,
-                'msg' => '参数验证失败',
-                'data' => $e->errors()
-            ], 422);
+            return $this->fail('参数验证失败', 422, $e->errors());
         } catch (\Exception $e) {
-            Log::error('获取用量历史失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $request->user()->id ?? null,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取用量历史失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取用量历史');
         }
     }
 }
