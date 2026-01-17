@@ -2,7 +2,7 @@
 
 namespace App\Modules\Progress\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Infrastructure\Http\Controllers\BaseController;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Modules\Progress\Models\ProgressRecord;
@@ -18,10 +18,11 @@ use Carbon\Carbon;
  * 进度追踪控制器
  * 提供进度记录、目标管理、趋势数据等API
  * 
- * @version 1.0.0
+ * @version 1.1.0
  * @date 2026-01-06
+ * @updated 2026-01-17 - 修复API响应规范合规性
  */
-class ProgressController extends Controller
+class ProgressController extends BaseController
 {
     /**
      * 获取进度概览
@@ -29,64 +30,65 @@ class ProgressController extends Controller
      */
     public function overview(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $startDate = $request->input('start_date', now()->subMonths(3)->format('Y-m-d'));
-        $endDate = $request->input('end_date', now()->format('Y-m-d'));
+        try {
+            $user = $request->user();
+            $startDate = $request->input('start_date', now()->subMonths(3)->format('Y-m-d'));
+            $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
-        // 获取体重趋势
-        $weightTrend = ProgressRecord::where('user_id', $user->id)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->orderBy('date')
-            ->get(['date', 'weight', 'body_fat'])
-            ->map(fn($r) => [
-                'date' => $r->date->format('Y-m-d'),
-                'weight' => (float) $r->weight,
-                'bodyFat' => $r->body_fat ? (float) $r->body_fat : null,
-            ]);
+            // 获取体重趋势
+            $weightTrend = ProgressRecord::where('user_id', $user->id)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->orderBy('date')
+                ->get(['date', 'weight', 'body_fat'])
+                ->map(fn($r) => [
+                    'date' => $r->date->format('Y-m-d'),
+                    'weight' => (float) $r->weight,
+                    'bodyFat' => $r->body_fat ? (float) $r->body_fat : null,
+                ]);
 
-        // 获取FFMI趋势
-        $ffmiTrend = ProgressRecord::where('user_id', $user->id)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->whereNotNull('ffmi')
-            ->orderBy('date')
-            ->get(['date', 'ffmi', 'lean_body_mass'])
-            ->map(fn($r) => [
-                'date' => $r->date->format('Y-m-d'),
-                'ffmi' => (float) $r->ffmi,
-                'leanBodyMass' => (float) $r->lean_body_mass,
-            ]);
+            // 获取FFMI趋势
+            $ffmiTrend = ProgressRecord::where('user_id', $user->id)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->whereNotNull('ffmi')
+                ->orderBy('date')
+                ->get(['date', 'ffmi', 'lean_body_mass'])
+                ->map(fn($r) => [
+                    'date' => $r->date->format('Y-m-d'),
+                    'ffmi' => (float) $r->ffmi,
+                    'leanBodyMass' => (float) $r->lean_body_mass,
+                ]);
 
-        // 获取训练日历数据
-        $trainingCalendar = $this->getTrainingCalendarData($user->id, now()->year, now()->month);
+            // 获取训练日历数据
+            $trainingCalendar = $this->getTrainingCalendarData($user->id, now()->year, now()->month);
 
-        // 获取活跃目标
-        $activeGoals = FitnessGoal::where('user_id', $user->id)
-            ->active()
-            ->get()
-            ->map(fn($g) => $this->formatGoal($g));
+            // 获取活跃目标
+            $activeGoals = FitnessGoal::where('user_id', $user->id)
+                ->active()
+                ->get()
+                ->map(fn($g) => $this->formatGoal($g));
 
-        // 获取最近记录
-        $recentRecords = ProgressRecord::where('user_id', $user->id)
-            ->orderBy('date', 'desc')
-            ->limit(10)
-            ->get()
-            ->map(fn($r) => $this->formatRecord($r));
+            // 获取最近记录
+            $recentRecords = ProgressRecord::where('user_id', $user->id)
+                ->orderBy('date', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(fn($r) => $this->formatRecord($r));
 
-        // 计算统计数据
-        $stats = $this->calculateStats($user->id);
+            // 计算统计数据
+            $stats = $this->calculateStats($user->id);
 
-        return response()->json([
-            'code' => 200,
-            'msg' => 'success',
-            'data' => [
+            return $this->success([
                 'weightTrend' => $weightTrend,
                 'ffmiTrend' => $ffmiTrend,
                 'trainingCalendar' => $trainingCalendar,
                 'activeGoals' => $activeGoals,
                 'recentRecords' => $recentRecords,
                 'stats' => $stats,
-            ],
-        ]);
+            ], '获取进度概览成功');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '获取进度概览');
+        }
     }
 
     /**
@@ -95,33 +97,34 @@ class ProgressController extends Controller
      */
     public function records(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $perPage = $request->input('per_page', 20);
+        try {
+            $user = $request->user();
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+            $perPage = $request->input('per_page', 20);
 
-        $query = ProgressRecord::where('user_id', $user->id)
-            ->orderBy('date', 'desc');
+            $query = ProgressRecord::where('user_id', $user->id)
+                ->orderBy('date', 'desc');
 
-        if ($startDate) {
-            $query->where('date', '>=', $startDate);
-        }
-        if ($endDate) {
-            $query->where('date', '<=', $endDate);
-        }
+            if ($startDate) {
+                $query->where('date', '>=', $startDate);
+            }
+            if ($endDate) {
+                $query->where('date', '<=', $endDate);
+            }
 
-        $records = $query->paginate($perPage);
+            $records = $query->paginate($perPage);
 
-        return response()->json([
-            'code' => 200,
-            'msg' => 'success',
-            'data' => [
+            return $this->success([
                 'data' => $records->items()->map(fn($r) => $this->formatRecord($r)),
                 'total' => $records->total(),
                 'currentPage' => $records->currentPage(),
                 'lastPage' => $records->lastPage(),
-            ],
-        ]);
+            ], '获取进度记录成功');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '获取进度记录');
+        }
     }
 
     /**
@@ -130,60 +133,64 @@ class ProgressController extends Controller
      */
     public function createRecord(Request $request): JsonResponse
     {
-        $request->validate([
-            'date' => 'required|date',
-            'weight' => 'required|numeric|min:20|max:300',
-            'body_fat' => 'nullable|numeric|min:1|max:60',
-            'measurements' => 'nullable|array',
-            'measurements.chest' => 'nullable|numeric|min:50|max:200',
-            'measurements.waist' => 'nullable|numeric|min:40|max:200',
-            'measurements.hips' => 'nullable|numeric|min:50|max:200',
-            'measurements.arms' => 'nullable|numeric|min:20|max:60',
-            'measurements.thighs' => 'nullable|numeric|min:30|max:100',
-            'notes' => 'nullable|string|max:500',
-        ]);
-
-        $user = $request->user();
-
-        // 检查是否已有当天记录
-        $existing = ProgressRecord::where('user_id', $user->id)
-            ->where('date', $request->date)
-            ->first();
-
-        if ($existing) {
-            // 更新现有记录
-            $existing->update([
-                'weight' => $request->weight,
-                'body_fat' => $request->body_fat,
-                'measurements' => $request->measurements,
-                'notes' => $request->notes,
+        try {
+            $request->validate([
+                'date' => 'required|date',
+                'weight' => 'required|numeric|min:20|max:300',
+                'body_fat' => 'nullable|numeric|min:1|max:60',
+                'measurements' => 'nullable|array',
+                'measurements.chest' => 'nullable|numeric|min:50|max:200',
+                'measurements.waist' => 'nullable|numeric|min:40|max:200',
+                'measurements.hips' => 'nullable|numeric|min:50|max:200',
+                'measurements.arms' => 'nullable|numeric|min:20|max:60',
+                'measurements.thighs' => 'nullable|numeric|min:30|max:100',
+                'notes' => 'nullable|string|max:500',
             ]);
-            $record = $existing->fresh();
-        } else {
-            // 创建新记录
-            $record = ProgressRecord::create([
-                'user_id' => $user->id,
-                'date' => $request->date,
-                'weight' => $request->weight,
-                'body_fat' => $request->body_fat,
-                'measurements' => $request->measurements,
-                'notes' => $request->notes,
-            ]);
+
+            $user = $request->user();
+
+            // 检查是否已有当天记录
+            $existing = ProgressRecord::where('user_id', $user->id)
+                ->where('date', $request->date)
+                ->first();
+
+            if ($existing) {
+                // 更新现有记录
+                $existing->update([
+                    'weight' => $request->weight,
+                    'body_fat' => $request->body_fat,
+                    'measurements' => $request->measurements,
+                    'notes' => $request->notes,
+                ]);
+                $record = $existing->fresh();
+            } else {
+                // 创建新记录
+                $record = ProgressRecord::create([
+                    'user_id' => $user->id,
+                    'date' => $request->date,
+                    'weight' => $request->weight,
+                    'body_fat' => $request->body_fat,
+                    'measurements' => $request->measurements,
+                    'notes' => $request->notes,
+                ]);
+            }
+
+            // 同步更新用户档案的体重
+            if ($user->userProfile) {
+                $user->userProfile->update([
+                    'weight' => $request->weight,
+                    'body_fat_percentage' => $request->body_fat,
+                ]);
+            }
+
+            return $this->success(
+                $this->formatRecord($record),
+                $existing ? '记录已更新' : '记录已创建'
+            );
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '创建进度记录');
         }
-
-        // 同步更新用户档案的体重
-        if ($user->userProfile) {
-            $user->userProfile->update([
-                'weight' => $request->weight,
-                'body_fat_percentage' => $request->body_fat,
-            ]);
-        }
-
-        return response()->json([
-            'code' => 200,
-            'msg' => $existing ? '记录已更新' : '记录已创建',
-            'data' => $this->formatRecord($record),
-        ]);
     }
 
     /**
@@ -192,15 +199,16 @@ class ProgressController extends Controller
      */
     public function getRecord(Request $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        $record = ProgressRecord::where('user_id', $user->id)
-            ->findOrFail($id);
+        try {
+            $user = $request->user();
+            $record = ProgressRecord::where('user_id', $user->id)
+                ->findOrFail($id);
 
-        return response()->json([
-            'code' => 200,
-            'msg' => 'success',
-            'data' => $this->formatRecord($record),
-        ]);
+            return $this->success($this->formatRecord($record), '获取记录成功');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '获取进度记录');
+        }
     }
 
     /**
@@ -209,24 +217,25 @@ class ProgressController extends Controller
      */
     public function updateRecord(Request $request, int $id): JsonResponse
     {
-        $request->validate([
-            'weight' => 'nullable|numeric|min:20|max:300',
-            'body_fat' => 'nullable|numeric|min:1|max:60',
-            'measurements' => 'nullable|array',
-            'notes' => 'nullable|string|max:500',
-        ]);
+        try {
+            $request->validate([
+                'weight' => 'nullable|numeric|min:20|max:300',
+                'body_fat' => 'nullable|numeric|min:1|max:60',
+                'measurements' => 'nullable|array',
+                'notes' => 'nullable|string|max:500',
+            ]);
 
-        $user = $request->user();
-        $record = ProgressRecord::where('user_id', $user->id)
-            ->findOrFail($id);
+            $user = $request->user();
+            $record = ProgressRecord::where('user_id', $user->id)
+                ->findOrFail($id);
 
-        $record->update($request->only(['weight', 'body_fat', 'measurements', 'notes']));
+            $record->update($request->only(['weight', 'body_fat', 'measurements', 'notes']));
 
-        return response()->json([
-            'code' => 200,
-            'msg' => '记录已更新',
-            'data' => $this->formatRecord($record->fresh()),
-        ]);
+            return $this->success($this->formatRecord($record->fresh()), '记录已更新');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '更新进度记录');
+        }
     }
 
     /**
@@ -235,17 +244,18 @@ class ProgressController extends Controller
      */
     public function deleteRecord(Request $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        $record = ProgressRecord::where('user_id', $user->id)
-            ->findOrFail($id);
+        try {
+            $user = $request->user();
+            $record = ProgressRecord::where('user_id', $user->id)
+                ->findOrFail($id);
 
-        $record->delete();
+            $record->delete();
 
-        return response()->json([
-            'code' => 200,
-            'msg' => '记录已删除',
-            'data' => null,
-        ]);
+            return $this->success(null, '记录已删除');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '删除进度记录');
+        }
     }
 
     /**
@@ -254,23 +264,24 @@ class ProgressController extends Controller
      */
     public function goals(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $status = $request->input('status', 'all');
+        try {
+            $user = $request->user();
+            $status = $request->input('status', 'all');
 
-        $query = FitnessGoal::where('user_id', $user->id)
-            ->orderBy('created_at', 'desc');
+            $query = FitnessGoal::where('user_id', $user->id)
+                ->orderBy('created_at', 'desc');
 
-        if ($status !== 'all') {
-            $query->where('status', $status);
+            if ($status !== 'all') {
+                $query->where('status', $status);
+            }
+
+            $goals = $query->get()->map(fn($g) => $this->formatGoal($g));
+
+            return $this->success($goals, '获取目标列表成功');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '获取目标列表');
         }
-
-        $goals = $query->get()->map(fn($g) => $this->formatGoal($g));
-
-        return response()->json([
-            'code' => 200,
-            'msg' => 'success',
-            'data' => $goals,
-        ]);
     }
 
     /**
@@ -279,35 +290,36 @@ class ProgressController extends Controller
      */
     public function createGoal(Request $request): JsonResponse
     {
-        $request->validate([
-            'type' => 'required|in:weight,body_fat,muscle_mass,strength,custom',
-            'name' => 'required|string|max:100',
-            'target_value' => 'required|numeric',
-            'current_value' => 'required|numeric',
-            'unit' => 'required|string|max:20',
-            'target_date' => 'nullable|date|after:today',
-        ]);
+        try {
+            $request->validate([
+                'type' => 'required|in:weight,body_fat,muscle_mass,strength,custom',
+                'name' => 'required|string|max:100',
+                'target_value' => 'required|numeric',
+                'current_value' => 'required|numeric',
+                'unit' => 'required|string|max:20',
+                'target_date' => 'nullable|date|after:today',
+            ]);
 
-        $user = $request->user();
+            $user = $request->user();
 
-        $goal = FitnessGoal::create([
-            'user_id' => $user->id,
-            'type' => $request->type,
-            'name' => $request->name,
-            'target_value' => $request->target_value,
-            'current_value' => $request->current_value,
-            'start_value' => $request->current_value,
-            'unit' => $request->unit,
-            'start_date' => now()->format('Y-m-d'),
-            'target_date' => $request->target_date,
-            'status' => 'active',
-        ]);
+            $goal = FitnessGoal::create([
+                'user_id' => $user->id,
+                'type' => $request->type,
+                'name' => $request->name,
+                'target_value' => $request->target_value,
+                'current_value' => $request->current_value,
+                'start_value' => $request->current_value,
+                'unit' => $request->unit,
+                'start_date' => now()->format('Y-m-d'),
+                'target_date' => $request->target_date,
+                'status' => 'active',
+            ]);
 
-        return response()->json([
-            'code' => 200,
-            'msg' => '目标已创建',
-            'data' => $this->formatGoal($goal),
-        ]);
+            return $this->success($this->formatGoal($goal), '目标已创建');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '创建目标');
+        }
     }
 
     /**
@@ -316,31 +328,32 @@ class ProgressController extends Controller
      */
     public function updateGoal(Request $request, int $id): JsonResponse
     {
-        $request->validate([
-            'current_value' => 'nullable|numeric',
-            'target_value' => 'nullable|numeric',
-            'target_date' => 'nullable|date',
-            'status' => 'nullable|in:active,completed,abandoned',
-        ]);
+        try {
+            $request->validate([
+                'current_value' => 'nullable|numeric',
+                'target_value' => 'nullable|numeric',
+                'target_date' => 'nullable|date',
+                'status' => 'nullable|in:active,completed,abandoned',
+            ]);
 
-        $user = $request->user();
-        $goal = FitnessGoal::where('user_id', $user->id)
-            ->findOrFail($id);
+            $user = $request->user();
+            $goal = FitnessGoal::where('user_id', $user->id)
+                ->findOrFail($id);
 
-        $updateData = $request->only(['current_value', 'target_value', 'target_date', 'status']);
+            $updateData = $request->only(['current_value', 'target_value', 'target_date', 'status']);
 
-        // 如果状态变为completed，记录完成日期
-        if (isset($updateData['status']) && $updateData['status'] === 'completed') {
-            $updateData['completed_at'] = now()->format('Y-m-d');
+            // 如果状态变为completed，记录完成日期
+            if (isset($updateData['status']) && $updateData['status'] === 'completed') {
+                $updateData['completed_at'] = now()->format('Y-m-d');
+            }
+
+            $goal->update($updateData);
+
+            return $this->success($this->formatGoal($goal->fresh()), '目标已更新');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '更新目标');
         }
-
-        $goal->update($updateData);
-
-        return response()->json([
-            'code' => 200,
-            'msg' => '目标已更新',
-            'data' => $this->formatGoal($goal->fresh()),
-        ]);
     }
 
     /**
@@ -349,17 +362,18 @@ class ProgressController extends Controller
      */
     public function deleteGoal(Request $request, int $id): JsonResponse
     {
-        $user = $request->user();
-        $goal = FitnessGoal::where('user_id', $user->id)
-            ->findOrFail($id);
+        try {
+            $user = $request->user();
+            $goal = FitnessGoal::where('user_id', $user->id)
+                ->findOrFail($id);
 
-        $goal->delete();
+            $goal->delete();
 
-        return response()->json([
-            'code' => 200,
-            'msg' => '目标已删除',
-            'data' => null,
-        ]);
+            return $this->success(null, '目标已删除');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '删除目标');
+        }
     }
 
     /**
@@ -368,17 +382,18 @@ class ProgressController extends Controller
      */
     public function calendar(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $year = $request->input('year', now()->year);
-        $month = $request->input('month', now()->month);
+        try {
+            $user = $request->user();
+            $year = $request->input('year', now()->year);
+            $month = $request->input('month', now()->month);
 
-        $data = $this->getTrainingCalendarData($user->id, $year, $month);
+            $data = $this->getTrainingCalendarData($user->id, $year, $month);
 
-        return response()->json([
-            'code' => 200,
-            'msg' => 'success',
-            'data' => $data,
-        ]);
+            return $this->success($data, '获取日历数据成功');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '获取训练日历');
+        }
     }
 
     /**
@@ -387,25 +402,26 @@ class ProgressController extends Controller
      */
     public function weightTrend(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $startDate = $request->input('start_date', now()->subMonths(3)->format('Y-m-d'));
-        $endDate = $request->input('end_date', now()->format('Y-m-d'));
+        try {
+            $user = $request->user();
+            $startDate = $request->input('start_date', now()->subMonths(3)->format('Y-m-d'));
+            $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
-        $trend = ProgressRecord::where('user_id', $user->id)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->orderBy('date')
-            ->get(['date', 'weight', 'body_fat'])
-            ->map(fn($r) => [
-                'date' => $r->date->format('Y-m-d'),
-                'weight' => (float) $r->weight,
-                'bodyFat' => $r->body_fat ? (float) $r->body_fat : null,
-            ]);
+            $trend = ProgressRecord::where('user_id', $user->id)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->orderBy('date')
+                ->get(['date', 'weight', 'body_fat'])
+                ->map(fn($r) => [
+                    'date' => $r->date->format('Y-m-d'),
+                    'weight' => (float) $r->weight,
+                    'bodyFat' => $r->body_fat ? (float) $r->body_fat : null,
+                ]);
 
-        return response()->json([
-            'code' => 200,
-            'msg' => 'success',
-            'data' => $trend,
-        ]);
+            return $this->success($trend, '获取体重趋势成功');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '获取体重趋势');
+        }
     }
 
     /**
@@ -414,26 +430,27 @@ class ProgressController extends Controller
      */
     public function ffmiTrend(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $startDate = $request->input('start_date', now()->subMonths(3)->format('Y-m-d'));
-        $endDate = $request->input('end_date', now()->format('Y-m-d'));
+        try {
+            $user = $request->user();
+            $startDate = $request->input('start_date', now()->subMonths(3)->format('Y-m-d'));
+            $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
-        $trend = ProgressRecord::where('user_id', $user->id)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->whereNotNull('ffmi')
-            ->orderBy('date')
-            ->get(['date', 'ffmi', 'lean_body_mass'])
-            ->map(fn($r) => [
-                'date' => $r->date->format('Y-m-d'),
-                'ffmi' => (float) $r->ffmi,
-                'leanBodyMass' => (float) $r->lean_body_mass,
-            ]);
+            $trend = ProgressRecord::where('user_id', $user->id)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->whereNotNull('ffmi')
+                ->orderBy('date')
+                ->get(['date', 'ffmi', 'lean_body_mass'])
+                ->map(fn($r) => [
+                    'date' => $r->date->format('Y-m-d'),
+                    'ffmi' => (float) $r->ffmi,
+                    'leanBodyMass' => (float) $r->lean_body_mass,
+                ]);
 
-        return response()->json([
-            'code' => 200,
-            'msg' => 'success',
-            'data' => $trend,
-        ]);
+            return $this->success($trend, '获取FFMI趋势成功');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '获取FFMI趋势');
+        }
     }
 
     // ==================== 私有方法 ====================

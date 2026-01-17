@@ -2,7 +2,7 @@
 
 namespace App\Modules\Auth\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Infrastructure\Http\Controllers\BaseController;
 use App\Modules\Auth\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -13,9 +13,9 @@ use Illuminate\Support\Facades\Validator;
  * 
  * 处理短信验证码发送、验证、登录等功能
  * 
- * @version 1.0.0
+ * @version 1.1.0 - 2026-01-17: 修复API响应规范合规性
  */
-class SmsController extends Controller
+class SmsController extends BaseController
 {
     private SmsService $smsService;
 
@@ -34,60 +34,49 @@ class SmsController extends Controller
      */
     public function send(Request $request): JsonResponse
     {
-        // 验证请求参数
-        $validator = Validator::make($request->all(), [
-            'phone' => ['required', 'string', 'regex:/^1[3-9]\d{9}$/'],
-        ], [
-            'phone.required' => '手机号不能为空',
-            'phone.regex' => '手机号格式不正确',
-        ]);
+        try {
+            // 验证请求参数
+            $validator = Validator::make($request->all(), [
+                'phone' => ['required', 'string', 'regex:/^1[3-9]\d{9}$/'],
+            ], [
+                'phone.required' => '手机号不能为空',
+                'phone.regex' => '手机号格式不正确',
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-                'code' => 'SMS_INVALID_PHONE',
-            ], 400);
-        }
-
-        $phone = $request->input('phone');
-        $ip = $request->ip();
-
-        // 发送验证码
-        $result = $this->smsService->sendVerificationCode($phone, $ip);
-
-        if (!$result['success']) {
-            $statusCode = 429; // Too Many Requests
-            $errorCode = 'SMS_RATE_LIMITED';
-
-            if (str_contains($result['message'], '格式')) {
-                $statusCode = 400;
-                $errorCode = 'SMS_INVALID_PHONE';
-            } elseif (str_contains($result['message'], '上限')) {
-                $errorCode = 'SMS_DAILY_LIMIT';
-            } elseif (str_contains($result['message'], '失败')) {
-                $statusCode = 500;
-                $errorCode = 'SMS_SEND_FAILED';
+            if ($validator->fails()) {
+                return $this->fail($validator->errors()->first(), 400);
             }
 
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-                'code' => $errorCode,
-                'data' => [
-                    'wait_seconds' => $result['wait_seconds'],
-                ],
-            ], $statusCode);
-        }
+            $phone = $request->input('phone');
+            $ip = $request->ip();
 
-        return response()->json([
-            'success' => true,
-            'message' => $result['message'],
-            'data' => [
+            // 发送验证码
+            $result = $this->smsService->sendVerificationCode($phone, $ip);
+
+            if (!$result['success']) {
+                $statusCode = 429; // Too Many Requests
+
+                if (str_contains($result['message'], '格式')) {
+                    $statusCode = 400;
+                } elseif (str_contains($result['message'], '上限')) {
+                    $statusCode = 429;
+                } elseif (str_contains($result['message'], '失败')) {
+                    $statusCode = 500;
+                }
+
+                return $this->fail($result['message'], $statusCode, [
+                    'wait_seconds' => $result['wait_seconds'] ?? null,
+                ]);
+            }
+
+            return $this->success([
                 'expires_at' => $result['expires_at'],
                 'wait_seconds' => $result['wait_seconds'],
-            ],
-        ]);
+            ], $result['message']);
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '发送短信验证码');
+        }
     }
 
     /**
@@ -100,56 +89,47 @@ class SmsController extends Controller
      */
     public function verify(Request $request): JsonResponse
     {
-        // 验证请求参数
-        $validator = Validator::make($request->all(), [
-            'phone' => ['required', 'string', 'regex:/^1[3-9]\d{9}$/'],
-            'code' => ['required', 'string', 'size:6'],
-        ], [
-            'phone.required' => '手机号不能为空',
-            'phone.regex' => '手机号格式不正确',
-            'code.required' => '验证码不能为空',
-            'code.size' => '验证码必须为6位',
-        ]);
+        try {
+            // 验证请求参数
+            $validator = Validator::make($request->all(), [
+                'phone' => ['required', 'string', 'regex:/^1[3-9]\d{9}$/'],
+                'code' => ['required', 'string', 'size:6'],
+            ], [
+                'phone.required' => '手机号不能为空',
+                'phone.regex' => '手机号格式不正确',
+                'code.required' => '验证码不能为空',
+                'code.size' => '验证码必须为6位',
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-                'code' => 'SMS_INVALID_PARAMS',
-            ], 400);
-        }
-
-        $phone = $request->input('phone');
-        $code = $request->input('code');
-
-        // 验证验证码
-        $result = $this->smsService->verifyCode($phone, $code);
-
-        if (!$result['success']) {
-            $statusCode = 400;
-            $errorCode = 'SMS_CODE_INVALID';
-
-            if (str_contains($result['message'], '过期')) {
-                $errorCode = 'SMS_CODE_EXPIRED';
-            } elseif (str_contains($result['message'], '锁定')) {
-                $statusCode = 403;
-                $errorCode = 'SMS_PHONE_LOCKED';
+            if ($validator->fails()) {
+                return $this->fail($validator->errors()->first(), 400);
             }
 
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-                'code' => $errorCode,
-            ], $statusCode);
-        }
+            $phone = $request->input('phone');
+            $code = $request->input('code');
 
-        return response()->json([
-            'success' => true,
-            'message' => $result['message'],
-            'data' => [
+            // 验证验证码
+            $result = $this->smsService->verifyCode($phone, $code);
+
+            if (!$result['success']) {
+                $statusCode = 400;
+
+                if (str_contains($result['message'], '过期')) {
+                    $statusCode = 400;
+                } elseif (str_contains($result['message'], '锁定')) {
+                    $statusCode = 403;
+                }
+
+                return $this->fail($result['message'], $statusCode);
+            }
+
+            return $this->success([
                 'verified' => true,
-            ],
-        ]);
+            ], $result['message']);
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '验证短信验证码');
+        }
     }
 
     /**
@@ -162,61 +142,50 @@ class SmsController extends Controller
      */
     public function login(Request $request): JsonResponse
     {
-        // 验证请求参数
-        $validator = Validator::make($request->all(), [
-            'phone' => ['required', 'string', 'regex:/^1[3-9]\d{9}$/'],
-            'code' => ['required', 'string', 'size:6'],
-        ], [
-            'phone.required' => '手机号不能为空',
-            'phone.regex' => '手机号格式不正确',
-            'code.required' => '验证码不能为空',
-            'code.size' => '验证码必须为6位',
-        ]);
+        try {
+            // 验证请求参数
+            $validator = Validator::make($request->all(), [
+                'phone' => ['required', 'string', 'regex:/^1[3-9]\d{9}$/'],
+                'code' => ['required', 'string', 'size:6'],
+            ], [
+                'phone.required' => '手机号不能为空',
+                'phone.regex' => '手机号格式不正确',
+                'code.required' => '验证码不能为空',
+                'code.size' => '验证码必须为6位',
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-                'code' => 'SMS_INVALID_PARAMS',
-            ], 400);
-        }
-
-        $phone = $request->input('phone');
-        $code = $request->input('code');
-        $ip = $request->ip();
-
-        // 手机号登录
-        $result = $this->smsService->loginWithSms($phone, $code, $ip);
-
-        if (!$result['success']) {
-            $statusCode = 400;
-            $errorCode = 'SMS_LOGIN_FAILED';
-
-            if (str_contains($result['message'], '未注册')) {
-                $statusCode = 404;
-                $errorCode = 'SMS_PHONE_NOT_FOUND';
-            } elseif (str_contains($result['message'], '禁用')) {
-                $statusCode = 403;
-                $errorCode = 'USER_DISABLED';
-            } elseif (str_contains($result['message'], '锁定')) {
-                $statusCode = 403;
-                $errorCode = 'SMS_PHONE_LOCKED';
-            } elseif (str_contains($result['message'], '验证码')) {
-                $errorCode = 'SMS_CODE_INVALID';
+            if ($validator->fails()) {
+                return $this->fail($validator->errors()->first(), 400);
             }
 
-            return response()->json([
-                'success' => false,
-                'message' => $result['message'],
-                'code' => $errorCode,
-            ], $statusCode);
-        }
+            $phone = $request->input('phone');
+            $code = $request->input('code');
+            $ip = $request->ip();
 
-        return response()->json([
-            'success' => true,
-            'message' => $result['message'],
-            'data' => $result['data'],
-        ]);
+            // 手机号登录
+            $result = $this->smsService->loginWithSms($phone, $code, $ip);
+
+            if (!$result['success']) {
+                $statusCode = 400;
+
+                if (str_contains($result['message'], '未注册')) {
+                    $statusCode = 404;
+                } elseif (str_contains($result['message'], '禁用')) {
+                    $statusCode = 403;
+                } elseif (str_contains($result['message'], '锁定')) {
+                    $statusCode = 403;
+                } elseif (str_contains($result['message'], '验证码')) {
+                    $statusCode = 400;
+                }
+
+                return $this->fail($result['message'], $statusCode);
+            }
+
+            return $this->success($result['data'], $result['message']);
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '手机号验证码登录');
+        }
     }
 
     /**
@@ -229,31 +198,29 @@ class SmsController extends Controller
      */
     public function checkPhone(Request $request): JsonResponse
     {
-        // 验证请求参数
-        $validator = Validator::make($request->all(), [
-            'phone' => ['required', 'string', 'regex:/^1[3-9]\d{9}$/'],
-        ], [
-            'phone.required' => '手机号不能为空',
-            'phone.regex' => '手机号格式不正确',
-        ]);
+        try {
+            // 验证请求参数
+            $validator = Validator::make($request->all(), [
+                'phone' => ['required', 'string', 'regex:/^1[3-9]\d{9}$/'],
+            ], [
+                'phone.required' => '手机号不能为空',
+                'phone.regex' => '手机号格式不正确',
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-                'code' => 'SMS_INVALID_PHONE',
-            ], 400);
-        }
+            if ($validator->fails()) {
+                return $this->fail($validator->errors()->first(), 400);
+            }
 
-        $phone = $request->input('phone');
-        $isRegistered = $this->smsService->isPhoneRegistered($phone);
+            $phone = $request->input('phone');
+            $isRegistered = $this->smsService->isPhoneRegistered($phone);
 
-        return response()->json([
-            'success' => true,
-            'data' => [
+            return $this->success([
                 'phone' => $phone,
                 'is_registered' => $isRegistered,
-            ],
-        ]);
+            ], '查询成功');
+            
+        } catch (\Exception $e) {
+            return $this->handleException($e, '检查手机号');
+        }
     }
 }

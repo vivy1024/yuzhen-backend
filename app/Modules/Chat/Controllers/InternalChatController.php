@@ -2,7 +2,7 @@
 
 namespace App\Modules\Chat\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Infrastructure\Http\Controllers\BaseController;
 use App\Models\ChatSession;
 use App\Models\ChatTopic;
 use Illuminate\Http\JsonResponse;
@@ -11,16 +11,17 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Internal Chat API Controller - MCO服务内部调用
+ * Internal Chat API Controller - MCP服务内部调用
  * 
- * 提供对话记录存储API，供MCO服务调用
+ * 提供对话记录存储API，供MCP服务调用
  * 
  * 认证方式：X-Internal-Token
  * 
- * @version 1.1.0
+ * @version 1.2.0
  * @date 2025-11-05
+ * @updated 2026-01-17 - 修复API响应规范合规性
  */
-class InternalChatController extends Controller
+class InternalChatController extends BaseController
 {
     /**
      * 保存对话记录
@@ -46,13 +47,7 @@ class InternalChatController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'code' => 422,
-                    'msg' => '验证失败',
-                    'data' => [
-                        'errors' => $validator->errors()
-                    ]
-                ], 422);
+                return $this->fail('验证失败', 422, ['errors' => $validator->errors()]);
             }
 
             // 创建对话记录
@@ -74,27 +69,14 @@ class InternalChatController extends Controller
                 'model_used' => $chatSession->model_used,
             ]);
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '保存成功',
-                'data' => [
-                    'id' => $chatSession->id,
-                    'session_id' => $chatSession->session_id,
-                    'created_at' => $chatSession->created_at->toIso8601String(),
-                ]
-            ]);
+            return $this->success([
+                'id' => $chatSession->id,
+                'session_id' => $chatSession->session_id,
+                'created_at' => $chatSession->created_at->toIso8601String(),
+            ], '保存成功');
 
         } catch (\Exception $e) {
-            Log::error('Failed to save chat session', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '保存失败: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '保存对话会话');
         }
     }
 
@@ -117,13 +99,7 @@ class InternalChatController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'code' => 422,
-                    'msg' => '验证失败',
-                    'data' => [
-                        'errors' => $validator->errors()
-                    ]
-                ], 422);
+                return $this->fail('验证失败', 422, ['errors' => $validator->errors()]);
             }
 
             // 查找并更新对话记录
@@ -132,11 +108,7 @@ class InternalChatController extends Controller
                 ->first();
 
             if (!$chatSession) {
-                return response()->json([
-                    'code' => 404,
-                    'msg' => '对话记录不存在',
-                    'data' => null
-                ], 404);
+                return $this->fail('对话记录不存在', 404);
             }
 
             // 更新反馈
@@ -151,31 +123,17 @@ class InternalChatController extends Controller
                 'user_rating' => $chatSession->user_rating,
             ]);
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '反馈更新成功',
-                'data' => [
-                    'id' => $chatSession->id,
-                    'session_id' => $chatSession->session_id,
-                    'user_rating' => $chatSession->user_rating,
-                    'is_high_quality' => $chatSession->isHighQuality(),
-                    'qdrant_point_id' => $chatSession->qdrant_point_id,
-                    'updated_at' => $chatSession->updated_at->toIso8601String(),
-                ]
-            ]);
+            return $this->success([
+                'id' => $chatSession->id,
+                'session_id' => $chatSession->session_id,
+                'user_rating' => $chatSession->user_rating,
+                'is_high_quality' => $chatSession->isHighQuality(),
+                'qdrant_point_id' => $chatSession->qdrant_point_id,
+                'updated_at' => $chatSession->updated_at->toIso8601String(),
+            ], '反馈更新成功');
 
         } catch (\Exception $e) {
-            Log::error('Failed to update feedback', [
-                'session_id' => $request->session_id ?? 'unknown',
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '更新失败: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '更新对话反馈');
         }
     }
 
@@ -203,37 +161,24 @@ class InternalChatController extends Controller
 
             $chatSessions = $query->limit($limit)->get();
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => [
-                    'count' => $chatSessions->count(),
-                    'sessions' => $chatSessions->map(function ($session) {
-                        return [
-                            'id' => $session->id,
-                            'session_id' => $session->session_id,
-                            'user_query' => $session->user_query,
-                            'llm_response' => $session->llm_response,
-                            'model_used' => $session->model_used,
-                            'tools_used' => $session->tools_used,
-                            'user_rating' => $session->user_rating,
-                            'created_at' => $session->created_at->toIso8601String(),
-                        ];
-                    }),
-                ]
-            ]);
+            return $this->success([
+                'count' => $chatSessions->count(),
+                'sessions' => $chatSessions->map(function ($session) {
+                    return [
+                        'id' => $session->id,
+                        'session_id' => $session->session_id,
+                        'user_query' => $session->user_query,
+                        'llm_response' => $session->llm_response,
+                        'model_used' => $session->model_used,
+                        'tools_used' => $session->tools_used,
+                        'user_rating' => $session->user_rating,
+                        'created_at' => $session->created_at->toIso8601String(),
+                    ];
+                }),
+            ], '获取成功');
 
         } catch (\Exception $e) {
-            Log::error('Failed to get chat history', [
-                'user_id' => $userId,
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取失败: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取对话历史');
         }
     }
 
@@ -261,35 +206,23 @@ class InternalChatController extends Controller
 
             $sessions = $query->limit($limit)->get();
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => [
-                    'count' => $sessions->count(),
-                    'sessions' => $sessions->map(function ($session) {
-                        return [
-                            'id' => $session->id,
-                            'user_query' => $session->user_query,
-                            'llm_response' => $session->llm_response,
-                            'model_used' => $session->model_used,
-                            'tools_used' => $session->tools_used,
-                            'user_rating' => $session->user_rating,
-                            'metadata' => $session->metadata,
-                        ];
-                    }),
-                ]
-            ]);
+            return $this->success([
+                'count' => $sessions->count(),
+                'sessions' => $sessions->map(function ($session) {
+                    return [
+                        'id' => $session->id,
+                        'user_query' => $session->user_query,
+                        'llm_response' => $session->llm_response,
+                        'model_used' => $session->model_used,
+                        'tools_used' => $session->tools_used,
+                        'user_rating' => $session->user_rating,
+                        'metadata' => $session->metadata,
+                    ];
+                }),
+            ], '获取成功');
 
         } catch (\Exception $e) {
-            Log::error('Failed to get high quality sessions', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取失败: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取高质量对话');
         }
     }
 
@@ -320,13 +253,7 @@ class InternalChatController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'code' => 422,
-                    'msg' => '验证失败',
-                    'data' => [
-                        'errors' => $validator->errors()
-                    ]
-                ], 422);
+                return $this->fail('验证失败', 422, ['errors' => $validator->errors()]);
             }
 
             // 查找对话记录
@@ -335,11 +262,7 @@ class InternalChatController extends Controller
                 ->first();
 
             if (!$chatSession) {
-                return response()->json([
-                    'code' => 404,
-                    'msg' => '对话记录不存在',
-                    'data' => null
-                ], 404);
+                return $this->fail('对话记录不存在', 404);
             }
 
             // 更新个性化评分
@@ -360,31 +283,17 @@ class InternalChatController extends Controller
                 'fewshot_eligible' => $request->fewshot_eligible,
             ]);
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '个性化评分更新成功',
-                'data' => [
-                    'id' => $chatSession->id,
-                    'session_id' => $chatSession->session_id,
-                    'personalization_grade' => $chatSession->personalization_grade,
-                    'fewshot_eligible' => $chatSession->fewshot_eligible,
-                    'overall_score' => $chatSession->overall_score,
-                    'updated_at' => $chatSession->updated_at->toIso8601String(),
-                ]
-            ]);
+            return $this->success([
+                'id' => $chatSession->id,
+                'session_id' => $chatSession->session_id,
+                'personalization_grade' => $chatSession->personalization_grade,
+                'fewshot_eligible' => $chatSession->fewshot_eligible,
+                'overall_score' => $chatSession->overall_score,
+                'updated_at' => $chatSession->updated_at->toIso8601String(),
+            ], '个性化评分更新成功');
 
         } catch (\Exception $e) {
-            Log::error('Failed to update personalization scores', [
-                'session_id' => $request->session_id ?? 'unknown',
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '更新失败: ' . $e->getMessage(),
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '更新个性化评分');
         }
     }
 
