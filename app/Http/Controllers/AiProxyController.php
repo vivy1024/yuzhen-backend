@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Infrastructure\Http\Controllers\BaseController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,10 +13,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * 
  * 将前端的AI请求代理到DAML-RAG服务
  * 
- * @version 1.0.0
+ * @version 1.1.0
  * @created 2026-01-13
+ * @updated 2026-01-17 - 修复API响应规范合规性
  */
-class AiProxyController extends Controller
+class AiProxyController extends BaseController
 {
     /**
      * DAML-RAG服务地址
@@ -125,7 +127,7 @@ class AiProxyController extends Controller
                 ->post("{$this->damlRagUrl}/api/v1/chat", $data);
             
             if ($response->successful()) {
-                return response()->json($response->json());
+                return $this->success($response->json(), 'AI对话成功');
             }
             
             Log::error('[AiProxy] DAML-RAG响应错误', [
@@ -133,22 +135,10 @@ class AiProxyController extends Controller
                 'body' => $response->body()
             ]);
             
-            return response()->json([
-                'code' => $response->status(),
-                'msg' => 'AI服务响应错误',
-                'data' => null
-            ], $response->status());
+            return $this->fail('AI服务响应错误', $response->status());
             
         } catch (\Exception $e) {
-            Log::error('[AiProxy] 非流式请求异常', [
-                'error' => $e->getMessage()
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => "AI服务异常: {$e->getMessage()}",
-                'data' => null
-            ], 500);
+            return $this->handleException($e, 'AI非流式对话');
         }
     }
     
@@ -164,25 +154,13 @@ class AiProxyController extends Controller
                 ->get("{$this->damlRagUrl}/api/health");
             
             if ($response->successful()) {
-                return response()->json([
-                    'code' => 200,
-                    'msg' => 'OK',
-                    'data' => $response->json()
-                ]);
+                return $this->success($response->json(), 'AI服务正常');
             }
             
-            return response()->json([
-                'code' => $response->status(),
-                'msg' => 'AI服务不可用',
-                'data' => null
-            ], $response->status());
+            return $this->fail('AI服务不可用', $response->status());
             
         } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'msg' => "AI服务连接失败: {$e->getMessage()}",
-                'data' => null
-            ], 500);
+            return $this->handleException($e, 'AI健康检查');
         }
     }
 }

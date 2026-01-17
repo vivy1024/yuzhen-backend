@@ -36,20 +36,14 @@ class InternalUserController extends BaseController
             $user = $this->userService->getDetail($userId);
             
             if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "用户档案不存在: {$userId}",
-                ], 404);
+                return $this->fail("用户档案不存在: {$userId}", 404);
             }
             
             // 获取用户档案（如果存在）- 修复：使用数组访问方式
             $profile = $user['profile'] ?? null;
             
             if (!$profile) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "用户档案未创建: {$userId}",
-                ], 404);
+                return $this->fail("用户档案未创建: {$userId}", 404);
             }
             
             // ✅ 计算BMI - 修复：使用数组访问方式
@@ -203,22 +197,10 @@ class InternalUserController extends BaseController
                 'profile_version' => $profile['version'] ?? null,
             ]);
             
-            return response()->json([
-                'success' => true,
-                'data' => $mcpFormat,
-            ]);
+            return $this->success($mcpFormat, 'MCP获取用户档案成功');
             
         } catch (\Exception $e) {
-            Log::error("MCP获取用户档案失败", [
-                'user_id' => $userId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => '获取用户档案失败: ' . $e->getMessage(),
-            ], 500);
+            return $this->handleException($e, 'MCP获取用户档案');
         }
     }
 
@@ -243,29 +225,20 @@ class InternalUserController extends BaseController
             $reason = $request->input('reason', '');
             
             if ($newMultiplier === null) {
-                return response()->json([
-                    'success' => false,
-                    'message' => '缺少必要参数: new_multiplier',
-                ], 400);
+                return $this->fail('缺少必要参数: new_multiplier', 400);
             }
             
             // 验证容量系数范围
             $newMultiplier = (float)$newMultiplier;
             if ($newMultiplier < 0.7 || $newMultiplier > 1.5) {
-                return response()->json([
-                    'success' => false,
-                    'message' => '容量系数必须在0.7-1.5范围内',
-                ], 400);
+                return $this->fail('容量系数必须在0.7-1.5范围内', 400);
             }
             
             // 获取用户
             $user = \App\Modules\User\Models\User::find($userId);
             
             if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "用户不存在: {$userId}",
-                ], 404);
+                return $this->fail("用户不存在: {$userId}", 404);
             }
             
             // 记录旧值
@@ -285,30 +258,17 @@ class InternalUserController extends BaseController
                 'reason' => $reason,
             ]);
             
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'user_id' => $userId,
-                    'old_multiplier' => $oldMultiplier,
-                    'new_multiplier' => $newMultiplier,
-                    'adjustment' => $adjustment,
-                    'reason' => $reason,
-                    'adjusted_at' => now()->toISOString(),
-                ],
-                'message' => '容量系数更新成功',
-            ]);
+            return $this->success([
+                'user_id' => $userId,
+                'old_multiplier' => $oldMultiplier,
+                'new_multiplier' => $newMultiplier,
+                'adjustment' => $adjustment,
+                'reason' => $reason,
+                'adjusted_at' => now()->toISOString(),
+            ], '容量系数更新成功');
             
         } catch (\Exception $e) {
-            Log::error("更新容量系数失败", [
-                'user_id' => $userId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => '更新容量系数失败: ' . $e->getMessage(),
-            ], 500);
+            return $this->handleException($e, '更新容量系数');
         }
     }
 
@@ -343,22 +303,13 @@ class InternalUserController extends BaseController
                 'limit' => $limit,
             ]);
             
-            return response()->json([
-                'success' => true,
-                'data' => $userIds,
+            return $this->success([
+                'user_ids' => $userIds,
                 'count' => count($userIds),
-            ]);
+            ], '获取活跃用户列表成功');
             
         } catch (\Exception $e) {
-            Log::error("获取活跃用户列表失败", [
-                'error' => $e->getMessage(),
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => '获取活跃用户列表失败: ' . $e->getMessage(),
-                'data' => [],
-            ], 500);
+            return $this->handleException($e, '获取活跃用户列表');
         }
     }
 
@@ -398,22 +349,13 @@ class InternalUserController extends BaseController
                 'limit' => $limit,
             ]);
             
-            return response()->json([
-                'success' => true,
-                'data' => $result,
+            return $this->success([
+                'users' => $result,
                 'count' => count($result),
-            ]);
+            ], '获取最近登录用户列表成功');
             
         } catch (\Exception $e) {
-            Log::error("获取最近登录用户列表失败", [
-                'error' => $e->getMessage(),
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => '获取最近登录用户列表失败: ' . $e->getMessage(),
-                'data' => [],
-            ], 500);
+            return $this->handleException($e, '获取最近登录用户列表');
         }
     }
 }
