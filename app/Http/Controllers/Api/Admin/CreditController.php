@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
-use App\Http\Controllers\Controller;
+use App\Infrastructure\Http\Controllers\BaseController;
 use App\Services\CreditService;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -22,12 +22,12 @@ use Illuminate\Support\Facades\Log;
  * 
  * 所有接口需要管理员权限
  * 
- * @version v1.0.0
- * @date 2026-01-11
+ * @version v1.1.0
+ * @date 2026-01-17
  * @author 薛小川
  * @requirements 3.6, 4.4
  */
-class CreditController extends Controller
+class CreditController extends BaseController
 {
     /**
      * @var CreditService
@@ -81,11 +81,7 @@ class CreditController extends Controller
             // 验证用户是否存在
             $user = User::find($id);
             if (!$user) {
-                return response()->json([
-                    'code' => 404,
-                    'msg' => '用户不存在',
-                    'data' => null
-                ], 404);
+                return $this->fail('用户不存在', 404);
             }
             
             $dagCredits = $validated['dag_credits'] ?? 0;
@@ -93,11 +89,7 @@ class CreditController extends Controller
             
             // 至少需要添加一种额度
             if ($dagCredits === 0 && $agentCredits === 0) {
-                return response()->json([
-                    'code' => 422,
-                    'msg' => '至少需要添加一种额度',
-                    'data' => null
-                ], 422);
+                return $this->fail('至少需要添加一种额度', 422);
             }
             
             $adminId = auth()->id();
@@ -111,11 +103,7 @@ class CreditController extends Controller
             );
             
             if (!$result['success']) {
-                return response()->json([
-                    'code' => 400,
-                    'msg' => $result['message'],
-                    'data' => $result
-                ], 400);
+                return $this->fail($result['message'], 400, $result);
             }
             
             Log::info('管理员添加用户额度', [
@@ -126,30 +114,12 @@ class CreditController extends Controller
                 'reason' => $validated['reason'],
             ]);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '添加成功',
-                'data' => $result
-            ]);
+            return $this->success($result, '添加成功');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'code' => 422,
-                'msg' => '参数验证失败',
-                'data' => $e->errors()
-            ], 422);
+            return $this->fail('参数验证失败', 422, $e->errors());
         } catch (\Exception $e) {
-            Log::error('添加用户额度失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $id,
-                'admin_id' => auth()->id(),
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '添加额度失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '添加用户额度');
         }
     }
 
@@ -195,11 +165,7 @@ class CreditController extends Controller
             
             // 至少需要添加一种额度
             if ($dagCredits === 0 && $agentCredits === 0) {
-                return response()->json([
-                    'code' => 422,
-                    'msg' => '至少需要添加一种额度',
-                    'data' => null
-                ], 422);
+                return $this->fail('至少需要添加一种额度', 422);
             }
             
             $adminId = auth()->id();
@@ -222,29 +188,12 @@ class CreditController extends Controller
                 'reason' => $validated['reason'],
             ]);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => "批量添加完成，成功{$result['success_count']}个，失败{$result['fail_count']}个",
-                'data' => $result
-            ]);
+            return $this->success($result, "批量添加完成，成功{$result['success_count']}个，失败{$result['fail_count']}个");
             
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'code' => 422,
-                'msg' => '参数验证失败',
-                'data' => $e->errors()
-            ], 422);
+            return $this->fail('参数验证失败', 422, $e->errors());
         } catch (\Exception $e) {
-            Log::error('批量添加用户额度失败', [
-                'error' => $e->getMessage(),
-                'admin_id' => auth()->id(),
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '批量添加额度失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '批量添加用户额度');
         }
     }
 
@@ -270,22 +219,10 @@ class CreditController extends Controller
         try {
             $stats = $this->creditService->getSystemCreditStats();
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => $stats
-            ]);
+            return $this->success($stats, '获取成功');
             
         } catch (\Exception $e) {
-            Log::error('获取系统额度统计失败', [
-                'error' => $e->getMessage(),
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取统计失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取系统额度统计');
         }
     }
 
@@ -334,11 +271,7 @@ class CreditController extends Controller
             // 验证用户是否存在
             $user = User::find($id);
             if (!$user) {
-                return response()->json([
-                    'code' => 404,
-                    'msg' => '用户不存在',
-                    'data' => null
-                ], 404);
+                return $this->fail('用户不存在', 404);
             }
             
             $limit = $validated['limit'] ?? 50;
@@ -346,34 +279,17 @@ class CreditController extends Controller
             $currentCredits = $this->creditService->getCredits($id);
             $logs = $this->creditService->getCreditHistory($id, $limit);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => [
-                    'user_id' => $id,
-                    'user_name' => $user->name,
-                    'current_credits' => $currentCredits,
-                    'logs' => $logs,
-                ]
-            ]);
+            return $this->success([
+                'user_id' => $id,
+                'user_name' => $user->name,
+                'current_credits' => $currentCredits,
+                'logs' => $logs,
+            ], '获取成功');
             
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'code' => 422,
-                'msg' => '参数验证失败',
-                'data' => $e->errors()
-            ], 422);
+            return $this->fail('参数验证失败', 422, $e->errors());
         } catch (\Exception $e) {
-            Log::error('获取用户额度历史失败', [
-                'error' => $e->getMessage(),
-                'user_id' => $id,
-            ]);
-            
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取历史失败',
-                'data' => null
-            ], 500);
+            return $this->handleException($e, '获取用户额度历史');
         }
     }
 }

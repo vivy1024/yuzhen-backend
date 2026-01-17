@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Infrastructure\Http\Controllers\BaseController;
 use App\Models\ChatSession;
 use App\Models\ExpertReview;
 use App\Services\PersonalizationScoreService;
@@ -29,7 +29,7 @@ use Illuminate\Support\Facades\DB;
  * @version 2.0.0
  * @date 2025-12-31
  */
-class QualityRatingController extends Controller
+class QualityRatingController extends BaseController
 {
     /**
      * 个性化评分服务
@@ -75,29 +75,19 @@ class QualityRatingController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'code' => 400,
-                    'msg' => '参数验证失败',
-                    'data' => $validator->errors()
-                ], 400);
+                return $this->fail('参数验证失败', 400, $validator->errors());
             }
 
             // 获取会话
             $session = ChatSession::where('session_id', $request->input('session_id'))->first();
             if (!$session) {
-                return response()->json([
-                    'code' => 404,
-                    'msg' => '会话不存在'
-                ], 404);
+                return $this->fail('会话不存在', 404);
             }
 
             // 验证用户权限（只能评价自己的会话）
             $userId = auth()->id();
             if ($session->user_id && $session->user_id !== $userId) {
-                return response()->json([
-                    'code' => 403,
-                    'msg' => '无权限为此会话评分'
-                ], 403);
+                return $this->fail('无权限为此会话评分', 403);
             }
 
             // 更新用户体验评分
@@ -154,23 +144,10 @@ class QualityRatingController extends Controller
                 $responseData['expert_review'] = $expertReview->getAllScores();
             }
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '评分提交成功',
-                'data' => $responseData
-            ]);
+            return $this->success($responseData, '评分提交成功');
 
         } catch (\Exception $e) {
-            Log::error('三轨评分提交失败: ' . $e->getMessage(), [
-                'session_id' => $request->input('session_id'),
-                'user_id' => auth()->id(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '评分提交失败: ' . $e->getMessage()
-            ], 500);
+            return $this->handleException($e, '三轨评分提交');
         }
     }
 
@@ -187,10 +164,7 @@ class QualityRatingController extends Controller
         try {
             $session = ChatSession::where('session_id', $sessionId)->first();
             if (!$session) {
-                return response()->json([
-                    'code' => 404,
-                    'msg' => '会话不存在'
-                ], 404);
+                return $this->fail('会话不存在', 404);
             }
 
             // 验证用户权限
@@ -199,10 +173,7 @@ class QualityRatingController extends Controller
             
             // 管理员可以查看所有，普通用户只能查看自己的
             if (!$user->isAdmin() && $session->user_id && $session->user_id !== $userId) {
-                return response()->json([
-                    'code' => 403,
-                    'msg' => '无权限查看此会话评分'
-                ], 403);
+                return $this->fail('无权限查看此会话评分', 403);
             }
 
             // 构建响应数据
@@ -225,21 +196,10 @@ class QualityRatingController extends Controller
                 $responseData['expert_review'] = $expertReview->getSummary();
             }
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => $responseData
-            ]);
+            return $this->success($responseData, '获取成功');
 
         } catch (\Exception $e) {
-            Log::error('获取评分失败: ' . $e->getMessage(), [
-                'session_id' => $sessionId
-            ]);
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取评分失败: ' . $e->getMessage()
-            ], 500);
+            return $this->handleException($e, '获取评分');
         }
     }
 
@@ -258,10 +218,7 @@ class QualityRatingController extends Controller
             // 验证用户是否为专家/管理员
             $user = auth()->user();
             if (!$user->isAdmin() && !$user->isExpert()) {
-                return response()->json([
-                    'code' => 403,
-                    'msg' => '只有专家或管理员可以提交专家评审'
-                ], 403);
+                return $this->fail('只有专家或管理员可以提交专家评审', 403);
             }
 
             // 参数验证
@@ -277,20 +234,13 @@ class QualityRatingController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'code' => 400,
-                    'msg' => '参数验证失败',
-                    'data' => $validator->errors()
-                ], 400);
+                return $this->fail('参数验证失败', 400, $validator->errors());
             }
 
             // 获取会话
             $session = ChatSession::where('session_id', $sessionId)->first();
             if (!$session) {
-                return response()->json([
-                    'code' => 404,
-                    'msg' => '会话不存在'
-                ], 404);
+                return $this->fail('会话不存在', 404);
             }
 
             // 创建或更新专家评审
@@ -317,28 +267,16 @@ class QualityRatingController extends Controller
             $session->fewshot_eligible = $eligibilityResult['eligible'];
             $session->save();
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '专家评审提交成功',
-                'data' => [
-                    'session_id' => $sessionId,
-                    'expert_review' => $expertReview->getSummary(),
-                    'overall_score' => $session->overall_score,
-                    'fewshot_eligible' => $session->fewshot_eligible,
-                    'eligibility_details' => $eligibilityResult,
-                ]
-            ]);
+            return $this->success([
+                'session_id' => $sessionId,
+                'expert_review' => $expertReview->getSummary(),
+                'overall_score' => $session->overall_score,
+                'fewshot_eligible' => $session->fewshot_eligible,
+                'eligibility_details' => $eligibilityResult,
+            ], '专家评审提交成功');
 
         } catch (\Exception $e) {
-            Log::error('专家评审提交失败: ' . $e->getMessage(), [
-                'session_id' => $sessionId,
-                'expert_id' => auth()->id()
-            ]);
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '专家评审提交失败: ' . $e->getMessage()
-            ], 500);
+            return $this->handleException($e, '专家评审提交');
         }
     }
 
@@ -355,10 +293,7 @@ class QualityRatingController extends Controller
         try {
             $session = ChatSession::where('session_id', $sessionId)->first();
             if (!$session) {
-                return response()->json([
-                    'code' => 404,
-                    'msg' => '会话不存在'
-                ], 404);
+                return $this->fail('会话不存在', 404);
             }
 
             // 验证用户权限
@@ -366,35 +301,21 @@ class QualityRatingController extends Controller
             $user = auth()->user();
             
             if (!$user->isAdmin() && $session->user_id && $session->user_id !== $userId) {
-                return response()->json([
-                    'code' => 403,
-                    'msg' => '无权限查看此会话'
-                ], 403);
+                return $this->fail('无权限查看此会话', 403);
             }
 
             // 检查Few-Shot资格
             $result = $this->fewShotService->checkEligibility($session);
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => [
-                    'session_id' => $sessionId,
-                    'eligible' => $result['eligible'],
-                    'reason' => $result['reason'],
-                    'details' => $result['details'],
-                ]
-            ]);
+            return $this->success([
+                'session_id' => $sessionId,
+                'eligible' => $result['eligible'],
+                'reason' => $result['reason'],
+                'details' => $result['details'],
+            ], '获取成功');
 
         } catch (\Exception $e) {
-            Log::error('检查Few-Shot资格失败: ' . $e->getMessage(), [
-                'session_id' => $sessionId
-            ]);
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '检查失败: ' . $e->getMessage()
-            ], 500);
+            return $this->handleException($e, '检查Few-Shot资格');
         }
     }
 
@@ -427,34 +348,25 @@ class QualityRatingController extends Controller
                 ->where('fewshot_eligible', true)
                 ->count();
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => [
-                    'is_cold_start' => $isColdStart,
-                    'session_count' => $sessionCount,
-                    'cold_start_threshold' => $coldStartCount,
-                    'remaining_cold_start_sessions' => $remainingSessions,
-                    'rated_session_count' => $ratedSessionCount,
-                    'eligible_session_count' => $eligibleSessionCount,
-                    'cold_start_benefits' => $isColdStart ? [
-                        '降低评分门槛（3.5分即可进入Few-Shot池）',
-                        '帮助系统快速学习您的偏好',
-                        '提供更个性化的建议',
-                    ] : [],
-                    'message' => $isColdStart 
-                        ? sprintf('您还有 %d 次冷启动期对话机会，评分门槛已降低', $remainingSessions)
-                        : '您已完成冷启动期，现在使用标准评分门槛',
-                ]
-            ]);
+            return $this->success([
+                'is_cold_start' => $isColdStart,
+                'session_count' => $sessionCount,
+                'cold_start_threshold' => $coldStartCount,
+                'remaining_cold_start_sessions' => $remainingSessions,
+                'rated_session_count' => $ratedSessionCount,
+                'eligible_session_count' => $eligibleSessionCount,
+                'cold_start_benefits' => $isColdStart ? [
+                    '降低评分门槛（3.5分即可进入Few-Shot池）',
+                    '帮助系统快速学习您的偏好',
+                    '提供更个性化的建议',
+                ] : [],
+                'message' => $isColdStart 
+                    ? sprintf('您还有 %d 次冷启动期对话机会，评分门槛已降低', $remainingSessions)
+                    : '您已完成冷启动期，现在使用标准评分门槛',
+            ], '获取成功');
 
         } catch (\Exception $e) {
-            Log::error('获取冷启动状态失败: ' . $e->getMessage());
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取失败: ' . $e->getMessage()
-            ], 500);
+            return $this->handleException($e, '获取冷启动状态');
         }
     }
 
@@ -471,27 +383,15 @@ class QualityRatingController extends Controller
             // 只允许管理员访问
             $user = auth()->user();
             if (!$user->isAdmin()) {
-                return response()->json([
-                    'code' => 403,
-                    'msg' => '权限不足'
-                ], 403);
+                return $this->fail('权限不足', 403);
             }
 
             $stats = $this->fewShotService->getPoolStats();
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => $stats
-            ]);
+            return $this->success($stats, '获取成功');
 
         } catch (\Exception $e) {
-            Log::error('获取Few-Shot池统计失败: ' . $e->getMessage());
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取失败: ' . $e->getMessage()
-            ], 500);
+            return $this->handleException($e, '获取Few-Shot池统计');
         }
     }
 
@@ -510,10 +410,7 @@ class QualityRatingController extends Controller
             // 只允许管理员访问
             $user = auth()->user();
             if (!$user->isAdmin()) {
-                return response()->json([
-                    'code' => 403,
-                    'msg' => '权限不足'
-                ], 403);
+                return $this->fail('权限不足', 403);
             }
 
             $limit = $request->input('limit', 20);
@@ -538,24 +435,15 @@ class QualityRatingController extends Controller
                 ];
             });
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => [
-                    'items' => $items,
-                    'total' => $sessions->total(),
-                    'page' => $page,
-                    'limit' => $limit,
-                ]
-            ]);
+            return $this->success([
+                'items' => $items,
+                'total' => $sessions->total(),
+                'page' => $page,
+                'limit' => $limit,
+            ], '获取成功');
 
         } catch (\Exception $e) {
-            Log::error('获取Few-Shot合格会话失败: ' . $e->getMessage());
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取失败: ' . $e->getMessage()
-            ], 500);
+            return $this->handleException($e, '获取Few-Shot合格会话');
         }
     }
 
@@ -572,10 +460,7 @@ class QualityRatingController extends Controller
             // 只允许管理员访问
             $user = auth()->user();
             if (!$user->isAdmin()) {
-                return response()->json([
-                    'code' => 403,
-                    'msg' => '权限不足'
-                ], 403);
+                return $this->fail('权限不足', 403);
             }
 
             // 总体统计
@@ -605,28 +490,19 @@ class QualityRatingController extends Controller
             $expertReviewCount = ExpertReview::count();
             $unsafeCount = ExpertReview::where('safety', '<', 3)->count();
 
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => [
-                    'total_sessions' => $totalSessions,
-                    'rated_sessions' => $ratedSessions,
-                    'fewshot_eligible' => $fewshotEligible,
-                    'fewshot_rate' => $totalSessions > 0 ? round($fewshotEligible / $totalSessions * 100, 2) : 0,
-                    'grade_distribution' => $gradeDistribution,
-                    'avg_scores' => array_map(fn($v) => $v ? round($v, 2) : null, $avgScores),
-                    'expert_review_count' => $expertReviewCount,
-                    'unsafe_count' => $unsafeCount,
-                ]
-            ]);
+            return $this->success([
+                'total_sessions' => $totalSessions,
+                'rated_sessions' => $ratedSessions,
+                'fewshot_eligible' => $fewshotEligible,
+                'fewshot_rate' => $totalSessions > 0 ? round($fewshotEligible / $totalSessions * 100, 2) : 0,
+                'grade_distribution' => $gradeDistribution,
+                'avg_scores' => array_map(fn($v) => $v ? round($v, 2) : null, $avgScores),
+                'expert_review_count' => $expertReviewCount,
+                'unsafe_count' => $unsafeCount,
+            ], '获取成功');
 
         } catch (\Exception $e) {
-            Log::error('获取评分统计失败: ' . $e->getMessage());
-
-            return response()->json([
-                'code' => 500,
-                'msg' => '获取失败: ' . $e->getMessage()
-            ], 500);
+            return $this->handleException($e, '获取评分统计');
         }
     }
 

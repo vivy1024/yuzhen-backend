@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Infrastructure\Http\Controllers\BaseController;
+
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
@@ -13,7 +15,7 @@ use Exception;
  * 
  * 提供系统和各组件的健康状态检查
  */
-class HealthCheckController extends Controller
+class HealthCheckController extends BaseController
 {
     /**
      * 基础健康检查
@@ -24,15 +26,11 @@ class HealthCheckController extends Controller
      */
     public function index(): JsonResponse
     {
-        return response()->json([
-            'code' => 200,
-            'msg' => 'OK',
-            'data' => [
-                'status' => 'healthy',
-                'version' => '2.0.0',
-                'timestamp' => now()->toISOString(),
-            ]
-        ]);
+        return $this->success([
+            'status' => 'healthy',
+            'version' => '2.0.0',
+            'timestamp' => now()->toISOString(),
+        ], 'OK');
     }
 
     /**
@@ -44,16 +42,12 @@ class HealthCheckController extends Controller
      */
     public function cors(): JsonResponse
     {
-        return response()->json([
-            'code' => 200,
-            'msg' => 'OK',
-            'data' => [
-                'cors_allowed_origins' => config('cors.allowed_origins'),
-                'cors_allowed_origins_env' => env('CORS_ALLOWED_ORIGINS'),
-                'cors_paths' => config('cors.paths'),
-                'cors_supports_credentials' => config('cors.supports_credentials'),
-            ]
-        ]);
+        return $this->success([
+            'cors_allowed_origins' => config('cors.allowed_origins'),
+            'cors_allowed_origins_env' => env('CORS_ALLOWED_ORIGINS'),
+            'cors_paths' => config('cors.paths'),
+            'cors_supports_credentials' => config('cors.supports_credentials'),
+        ], 'OK');
     }
 
     /**
@@ -85,20 +79,16 @@ class HealthCheckController extends Controller
             default => 'unhealthy'
         };
 
-        return response()->json([
-            'code' => 200,
-            'msg' => 'OK',
-            'data' => [
-                'status' => $overallStatus,
-                'timestamp' => now()->toISOString(),
-                'components' => $components,
-                'summary' => [
-                    'total' => $totalCount,
-                    'healthy' => $healthyCount,
-                    'unhealthy' => $totalCount - $healthyCount,
-                ]
+        return $this->success([
+            'status' => $overallStatus,
+            'timestamp' => now()->toISOString(),
+            'components' => $components,
+            'summary' => [
+                'total' => $totalCount,
+                'healthy' => $healthyCount,
+                'unhealthy' => $totalCount - $healthyCount,
             ]
-        ]);
+        ], 'OK');
     }
 
     /**
