@@ -1,7 +1,7 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.107.0
-**更新日期**: 2026-01-17
+**版本**: v2.108.0
+**更新日期**: 2026-02-01
 **项目状态**: ✅ 生产运行
 
 ---
@@ -16,6 +16,23 @@
 ---
 
 ## 版本历史
+
+### v2.108.0 (2026-02-01) - 添加内部API用量增加路由 🔧
+
+**变更类型**: 🔧 功能增强
+
+**问题描述**：
+DAML-RAG服务调用 `/api/usage/increment` 增加用量时返回401认证失败，因为该端点需要JWT认证，但DAML-RAG使用的是内部API令牌。
+
+**修复内容**：
+1. **添加内部API路由** (`routes/internal.php`):
+   - 新增 `POST /api/internal/membership/increment-usage` 路由
+   - 使用 `X-Internal-Token` 认证，供DAML-RAG服务调用
+
+**修改文件**：
+- `routes/internal.php` - 添加 increment-usage 路由
+
+---
 
 ### v2.107.0 (2026-01-17) - API响应规范文档更新 📚
 
