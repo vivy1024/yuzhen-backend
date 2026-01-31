@@ -151,12 +151,15 @@ class InternalUserController extends BaseController
                 ],
                 
                 // ============ 健身目标 ============
-                'fitness_goals' => !empty($fitnessGoals) ? $fitnessGoals : [
-                    'primary_goals' => !empty($profile['primary_goals']) ? json_decode($profile['primary_goals'], true) : (!empty($profile['fitness_goal']) ? [$profile['fitness_goal']] : []),
-                    'target_weight' => $profile['target_weight'] ?? null,
-                    'secondary_goals' => !empty($profile['secondary_goals']) ? json_decode($profile['secondary_goals'], true) : [],
-                    'goal_priority' => !empty($profile['goal_priority']) ? json_decode($profile['goal_priority'], true) : [],
-                    'training_split' => $profile['training_split'] ?? null,
+                // 前端使用 primary_goal（单数，字符串）和 secondary_goals（数组）
+                // 数据库中 fitness_goals 是 JSON 字段，存储格式为：
+                // { "primary_goal": "增肌", "secondary_goals": ["减脂"], "target_weight": 70 }
+                'fitness_goals' => [
+                    'primary_goal' => $fitnessGoals['primary_goal'] ?? null,
+                    'secondary_goals' => $fitnessGoals['secondary_goals'] ?? [],
+                    'target_weight' => $fitnessGoals['target_weight'] ?? null,
+                    'goal_priority' => $fitnessGoals['goal_priority'] ?? [],
+                    'training_split' => $fitnessGoals['training_split'] ?? null,
                 ],
                 
                 // ============ 力量水平 ============

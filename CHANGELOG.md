@@ -17,20 +17,26 @@
 
 ## 版本历史
 
-### v2.108.0 (2026-02-01) - 添加内部API用量增加路由 🔧
+### v2.108.0 (2026-02-01) - 修复内部API用量增加路由和fitness_goals字段映射 🔧
 
-**变更类型**: 🔧 功能增强
+**变更类型**: 🔧 功能增强 + 🐛 Bug修复
 
 **问题描述**：
-DAML-RAG服务调用 `/api/usage/increment` 增加用量时返回401认证失败，因为该端点需要JWT认证，但DAML-RAG使用的是内部API令牌。
+1. DAML-RAG服务调用 `/api/usage/increment` 增加用量时返回401认证失败
+2. 内部API返回的 `fitness_goals` 使用了旧的 `primary_goals`（复数，数组）格式，而前端使用的是 `primary_goal`（单数，字符串）
 
 **修复内容**：
 1. **添加内部API路由** (`routes/internal.php`):
    - 新增 `POST /api/internal/membership/increment-usage` 路由
    - 使用 `X-Internal-Token` 认证，供DAML-RAG服务调用
 
+2. **修复fitness_goals字段映射** (`InternalUserController.php`):
+   - 修正 `fitness_goals` 返回格式，使用 `primary_goal`（单数）而非 `primary_goals`（复数）
+   - 与前端 `edit.vue` 保持一致
+
 **修改文件**：
 - `routes/internal.php` - 添加 increment-usage 路由
+- `app/Modules/User/Controllers/InternalUserController.php` - 修复 fitness_goals 字段映射
 
 ---
 
