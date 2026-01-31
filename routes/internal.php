@@ -28,6 +28,7 @@ Route::prefix('internal')->middleware(['internal.api'])->group(function () {
     // 会员权限API（为AI对话系统提供）
     Route::post('/membership/check-permission', [InternalMembershipController::class, 'checkPermission']);
     Route::get('/membership/user/{userId}', [InternalMembershipController::class, 'getUserMembership']);
+    Route::post('/membership/increment-usage', [InternalMembershipController::class, 'incrementUsage']);
     
     // 对话记录API（为MCO服务提供）
     Route::post('/chat/save-session', [InternalChatController::class, 'saveChatSession']);
