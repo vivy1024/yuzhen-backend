@@ -18,6 +18,21 @@ use App\Http\Controllers\Admin\DataMigrationController;
  * 中间件: jwt.auth + admin
  */
 
+// 管理员身份验证（仅需jwt.auth，用于前端路由守卫）
+Route::prefix('admin')->middleware(['jwt.auth'])->group(function () {
+    Route::get('/verify', function () {
+        $user = auth()->user();
+        return response()->json([
+            'code' => 200,
+            'msg' => 'success',
+            'data' => [
+                'is_admin' => $user->role === 'admin',
+                'role' => $user->role ?? 'user',
+            ]
+        ]);
+    });
+});
+
 Route::prefix('admin')->middleware(['jwt.auth', 'admin'])->group(function () {
     
     // ========== 订单管理 ==========
