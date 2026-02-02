@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.109.0
+**版本**: v2.110.0
 **更新日期**: 2026-02-02
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,26 @@
 ---
 
 ## 版本历史
+
+### v2.110.0 (2026-02-02) - 修复主要目标保存问题 🐛
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**：
+- 前端发送 `primary_goals`（复数数组）如 `["增肌"]`
+- 后端验证规则只接受 `primary_goal`（单数字符串）
+- 导致主要目标无法保存到数据库
+
+**修复内容**：
+- **UpdateProfileRequest.php**:
+  - 添加 `primary_goals` 数组验证规则
+  - 在 `validated()` 方法中兼容处理两种格式
+  - 优先使用 `primary_goal`，若不存在则从 `primary_goals` 数组取第一个元素
+
+**修改文件**：
+- `app/Modules/User/Requests/UpdateProfileRequest.php`
+
+---
 
 ### v2.109.0 (2026-02-02) - 添加管理员身份验证接口 🔐
 
