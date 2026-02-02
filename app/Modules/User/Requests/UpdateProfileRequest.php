@@ -31,7 +31,10 @@ class UpdateProfileRequest extends FormRequest
             'sleep_hours' => 'nullable|numeric|min:0|max:24',
             
             // 健身目标（统一化后的8个选项）
+            // 支持两种格式：primary_goal（字符串）或 primary_goals（数组）
             'primary_goal' => 'nullable|string|in:增肌,减脂,增强力量,提高耐力,塑形,功能性训练,运动表现,康复训练',
+            'primary_goals' => 'nullable|array',
+            'primary_goals.*' => 'nullable|string|in:增肌,减脂,增强力量,提高耐力,塑形,功能性训练,运动表现,康复训练',
             'secondary_goals' => 'nullable|array',
             'secondary_goals.*' => 'nullable|string|in:增肌,减脂,增强力量,提高耐力,塑形,功能性训练,运动表现,康复训练',
             'target_weight' => 'nullable|numeric|min:20|max:500',
@@ -109,7 +112,11 @@ class UpdateProfileRequest extends FormRequest
             ], fn($value) => !is_null($value)),
             
             'fitness_goals' => [
-                'primary_goal' => $validated['primary_goal'] ?? '',
+                // 兼容处理：支持 primary_goal（字符串）或 primary_goals（数组）
+                'primary_goal' => $validated['primary_goal'] 
+                    ?? (isset($validated['primary_goals']) && is_array($validated['primary_goals']) && count($validated['primary_goals']) > 0 
+                        ? $validated['primary_goals'][0] 
+                        : ''),
                 'secondary_goals' => $validated['secondary_goals'] ?? [],
                 'target_weight' => $validated['target_weight'] ?? null,
                 'training_split' => $validated['training_split'] ?? null,
