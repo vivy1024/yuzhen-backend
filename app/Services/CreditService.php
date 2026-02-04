@@ -4,51 +4,407 @@ namespace App\Services;
 
 use App\Models\UserCredit;
 use App\Models\CreditLog;
+use App\Models\CreditTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * CreditService - 额度管理服务
+ * CreditService - 积分管理服务
  * 
- * 负责用户额外次数（打赏奖励）的管理
+ * 负责积分体系的核心功能：
+ * - 积分计算（基于Token消耗）
+ * - 积分余额查询
+ * - 积分流水记录
+ * - 积分扣除
+ * - 每日配额重置
  * 
- * 核心功能：
- * - 获取用户额度
- * - 添加额度（管理员操作）
- * - 扣减额度（带事务和不变量检查）
+ * 积分计算公式：credits = ceil(tokens × multiplier / 1000)
+ * - Agent模式：multiplier = 1.5
+ * - DAG模式：multiplier = 1.0
+ * - 最小消耗：1积分
  * 
  * 不变量：
- * - 额度余额永远不能为负数
- * - 所有额度变更必须记录日志
+ * - 积分余额永远不能为负数
+ * - 所有积分变更必须记录流水
+ * - 最小消耗为1积分
  * 
- * @version v1.0.0
- * @date 2026-01-11
+ * @version v2.0.0
+ * @date 2026-02-05
  * @author 薛小川
- * @requirements 3.1-3.6
+ * @requirements 1.1-1.5, 2.1-2.5, 3.1-3.5, 4.1-4.5, 5.1-5.5
  */
 class CreditService
 {
     /**
-     * 获取用户额度
+     * 积分计算常量
+     */
+    const TOKENS_PER_CREDIT = 1000;
+    const AGENT_MULTIPLIER = 1.5;
+    const DAG_MULTIPLIER = 1.0;
+    const MIN_CREDITS = 1;
+    
+    /**
+     * 每日配额（按会员等级）
+     */
+    const DAILY_QUOTAS = [
+        'free' => 10,
+        'warmheart' => 50,
+        'energy' => 200,
+    ];
+    
+    /**
+     * 计算积分消耗
+     * 
+     * 公式：credits = ceil(tokens × multiplier / 1000)
+     * - Agent模式使用1.5x倍率
+     * - DAG模式使用1.0x倍率
+     * - 最小消耗为1积分
+     * 
+     * @param int $tokens Token消耗数量
+     * @param string $mode 查询模式：'agent' 或 'dag'
+     * @return int 计算后的积分消耗
+     * 
+     * @requirements 1.1, 1.2, 1.3, 1.4, 1.5
+     */
+    public function calculateCredits(int $tokens, string $mode): int
+    {
+        // 确定倍率：agent模式1.5x，其他模式（dag）1.0x
+        $multiplier = strtolower($mode) === 'agent' 
+            ? self::AGENT_MULTIPLIER 
+            : self::DAG_MULTIPLIER;
+        
+        // 计算积分：向上取整
+        $credits = (int) ceil(($tokens * $multiplier) / self::TOKENS_PER_CREDIT);
+        
+        // 确保最小消耗为1积分
+        return max(self::MIN_CREDITS, $credits);
+    }
+    /**
+     * 获取用户积分余额
+     * 
+     * 返回用户当前的积分状态，包括：
+     * - 每日配额和消耗情况
+     * - 会员等级信息
+     * - 低余额警告
      * 
      * @param int $userId 用户ID
-     * @return array 额度信息
+     * @return array 积分余额信息
      * 
      * 返回格式：
      * [
-     *     'dag_credits' => int,     // DAG额外次数
-     *     'agent_credits' => int,   // Agent额外次数
-     *     'total_credits' => int,   // 总额度
+     *     'daily_quota' => int,        // 每日积分配额
+     *     'daily_consumed' => int,     // 今日已消耗积分
+     *     'remaining' => int,          // 剩余积分
+     *     'total_consumed' => int,     // 历史总消耗
+     *     'membership_tier' => string, // 会员等级
+     *     'is_mvp_phase' => bool,      // 是否为MVP阶段（已结束）
+     *     'low_balance_warning' => bool, // 低余额警告
+     *     'last_reset' => string,      // 上次重置日期
      * ]
+     * 
+     * @requirements 4.1, 4.2, 4.3, 4.4, 4.5
+     */
+    public function getBalance(int $userId): array
+    {
+        // 获取用户会员等级
+        $membershipTier = $this->getUserMembershipTier($userId);
+        
+        // 获取或创建用户积分记录
+        $userCredit = UserCredit::getOrCreate($userId, $membershipTier);
+        
+        // 检查是否需要重置每日配额
+        if ($userCredit->needsReset()) {
+            $this->resetDailyQuota($userId);
+            $userCredit->refresh();
+        }
+        
+        return [
+            'daily_quota' => $userCredit->daily_quota,
+            'daily_consumed' => $userCredit->daily_consumed,
+            'remaining' => $userCredit->remaining,
+            'total_consumed' => $userCredit->total_consumed,
+            'membership_tier' => $membershipTier,
+            'is_mvp_phase' => false, // MVP阶段已结束，直接扣除积分
+            'low_balance_warning' => $userCredit->isLowBalance(),
+            'last_reset' => $userCredit->last_reset_date->toDateString(),
+        ];
+    }
+    
+    /**
+     * 获取用户会员等级
+     * 
+     * 从users表的membership_tier字段获取用户会员等级
+     * 
+     * @param int $userId 用户ID
+     * @return string 会员等级（free/warmheart/energy）
+     */
+    protected function getUserMembershipTier(int $userId): string
+    {
+        $user = \App\Modules\User\Models\User::find($userId);
+        
+        if (!$user) {
+            return 'free';
+        }
+        
+        // 获取用户的会员等级，默认为free
+        $tier = $user->membership_tier ?? 'free';
+        
+        // 标准化tier值（newbie → free）
+        if ($tier === 'newbie' || empty($tier)) {
+            return 'free';
+        }
+        
+        // 确保返回有效的等级
+        if (!in_array($tier, ['free', 'warmheart', 'energy'])) {
+            return 'free';
+        }
+        
+        return $tier;
+    }
+    
+    /**
+     * 记录积分消耗
+     * 
+     * 记录完整的交易信息，同时扣除用户积分余额
+     * 使用数据库事务确保原子性
+     * 
+     * @param int $userId 用户ID
+     * @param array $data 交易数据
+     *   - tokens: int 消耗的Token数
+     *   - mode: string 查询模式（dag/agent）
+     *   - template_name: string|null DAG模板名称
+     *   - conversation_id: string|null 会话ID
+     *   - input_tokens: int 输入Token数
+     *   - output_tokens: int 输出Token数
+     *   - description: string|null 描述
+     * @return CreditTransaction
+     * @throws \Exception 当积分不足或数据库操作失败时
+     * 
+     * @requirements 3.1, 3.2, 3.3, 5.1
+     */
+    public function recordTransaction(int $userId, array $data): CreditTransaction
+    {
+        // 验证必要参数
+        if (!isset($data['tokens']) || !isset($data['mode'])) {
+            throw new \InvalidArgumentException('tokens和mode参数是必需的');
+        }
+        
+        // 计算积分消耗
+        $credits = $this->calculateCredits($data['tokens'], $data['mode']);
+        
+        // 使用数据库事务确保原子性
+        return DB::transaction(function () use ($userId, $credits, $data) {
+            // 1. 获取用户会员等级
+            $membershipTier = $this->getUserMembershipTier($userId);
+            
+            // 2. 获取或创建用户积分记录（加锁防止并发问题）
+            $userCredit = UserCredit::where('user_id', $userId)->lockForUpdate()->first();
+            
+            if (!$userCredit) {
+                $userCredit = UserCredit::getOrCreate($userId, $membershipTier);
+                $userCredit = UserCredit::where('user_id', $userId)->lockForUpdate()->first();
+            }
+            
+            // 3. 检查是否需要重置每日配额
+            if ($userCredit->needsReset()) {
+                $newQuota = self::DAILY_QUOTAS[$membershipTier] ?? self::DAILY_QUOTAS['free'];
+                $userCredit->resetDailyQuota($newQuota);
+            }
+            
+            // 4. 检查积分是否足够
+            if (!$userCredit->hasSufficientCredits($credits)) {
+                throw new \Exception("积分不足，当前剩余: {$userCredit->remaining}，需要: {$credits}");
+            }
+            
+            // 5. 创建流水记录
+            $transaction = CreditTransaction::create([
+                'user_id' => $userId,
+                'credits' => $credits,
+                'tokens' => $data['tokens'],
+                'mode' => $data['mode'],
+                'template_name' => $data['template_name'] ?? null,
+                'conversation_id' => $data['conversation_id'] ?? null,
+                'input_tokens' => $data['input_tokens'] ?? 0,
+                'output_tokens' => $data['output_tokens'] ?? 0,
+                'description' => $data['description'] ?? null,
+            ]);
+            
+            // 6. 扣除用户积分
+            $userCredit->daily_consumed += $credits;
+            $userCredit->total_consumed += $credits;
+            $userCredit->save();
+            
+            // 7. 记录日志
+            Log::info('积分消耗记录成功', [
+                'user_id' => $userId,
+                'credits' => $credits,
+                'tokens' => $data['tokens'],
+                'mode' => $data['mode'],
+                'template_name' => $data['template_name'] ?? null,
+                'remaining' => $userCredit->remaining,
+            ]);
+            
+            return $transaction;
+        });
+    }
+    
+    /**
+     * 检查用户积分是否足够
+     * 
+     * 检查用户剩余积分是否满足本次查询需求，
+     * 如果不足则返回友好的提示消息和升级建议
+     * 
+     * @param int $userId 用户ID
+     * @param int $requiredCredits 需要的积分数
+     * @return array 检查结果
+     * 
+     * 返回格式：
+     * [
+     *     'sufficient' => bool,        // 积分是否充足
+     *     'message' => string,         // 提示消息
+     *     'remaining' => int,          // 剩余积分
+     *     'required' => int,           // 需要的积分（仅当不足时）
+     *     'membership_tier' => string, // 会员等级（仅当不足时）
+     * ]
+     * 
+     * @requirements 5.2, 5.5
+     */
+    public function checkSufficientCredits(int $userId, int $requiredCredits): array
+    {
+        // 1. 获取用户会员等级
+        $membershipTier = $this->getUserMembershipTier($userId);
+        
+        // 2. 获取或创建用户积分记录
+        $userCredit = UserCredit::getOrCreate($userId, $membershipTier);
+        
+        // 3. 检查是否需要重置每日配额
+        if ($userCredit->needsReset()) {
+            $this->resetDailyQuota($userId);
+            $userCredit->refresh();
+        }
+        
+        // 4. 获取剩余积分
+        $remaining = $userCredit->remaining;
+        $sufficient = $remaining >= $requiredCredits;
+        
+        // 5. 积分充足，返回成功
+        if ($sufficient) {
+            return [
+                'sufficient' => true,
+                'message' => '积分充足',
+                'remaining' => $remaining,
+            ];
+        }
+        
+        // 6. 积分不足，返回友好提示和升级建议
+        $upgradeMessage = $this->getUpgradeMessage($membershipTier);
+        
+        return [
+            'sufficient' => false,
+            'message' => "今日积分已用完，剩余{$remaining}积分，需要{$requiredCredits}积分。{$upgradeMessage}",
+            'remaining' => $remaining,
+            'required' => $requiredCredits,
+            'membership_tier' => $membershipTier,
+        ];
+    }
+    
+    /**
+     * 获取升级提示消息
+     * 
+     * 根据用户当前会员等级，返回相应的升级建议
+     * 
+     * @param string $currentTier 当前会员等级
+     * @return string 升级提示消息
+     */
+    protected function getUpgradeMessage(string $currentTier): string
+    {
+        return match ($currentTier) {
+            'free' => '升级为暖心会员可获得每日50积分！',
+            'warmheart' => '升级为能量会员可获得每日200积分！',
+            'energy' => '明天将重置每日配额。',
+            default => '升级会员可获得更多每日积分！',
+        };
+    }
+    
+    /**
+     * 重置用户每日积分配额
+     * 
+     * 在北京时间00:00重置用户的每日配额
+     * 根据用户当前会员等级设置新的配额
+     * 
+     * 重置逻辑：
+     * 1. 获取用户当前会员等级
+     * 2. 根据等级确定新的每日配额
+     * 3. 重置daily_consumed为0
+     * 4. 更新last_reset_date为今天
+     * 5. 更新daily_quota为新配额
+     * 
+     * 配额标准：
+     * - 免费用户(free): 10积分/天
+     * - 暖心会员(warmheart): 50积分/天
+     * - 能量会员(energy): 200积分/天
+     * 
+     * @param int $userId 用户ID
+     * @return void
+     * 
+     * @requirements 2.1, 2.2, 2.3, 2.4
+     */
+    public function resetDailyQuota(int $userId): void
+    {
+        // 1. 获取用户当前会员等级
+        $membershipTier = $this->getUserMembershipTier($userId);
+        
+        // 2. 根据会员等级确定新的每日配额
+        $newQuota = self::DAILY_QUOTAS[$membershipTier] ?? self::DAILY_QUOTAS['free'];
+        
+        // 3. 获取或创建用户积分记录
+        $userCredit = UserCredit::getOrCreate($userId, $membershipTier);
+        
+        // 4. 检查是否需要重置（避免重复重置）
+        if (!$userCredit->needsReset()) {
+            // 如果今天已经重置过，只更新配额（会员升级场景）
+            if ($userCredit->daily_quota !== $newQuota) {
+                $userCredit->daily_quota = $newQuota;
+                $userCredit->save();
+                
+                Log::info('用户积分配额已更新（会员等级变更）', [
+                    'user_id' => $userId,
+                    'membership_tier' => $membershipTier,
+                    'new_quota' => $newQuota,
+                ]);
+            }
+            return;
+        }
+        
+        // 5. 执行每日配额重置
+        $oldConsumed = $userCredit->daily_consumed;
+        $userCredit->resetDailyQuota($newQuota);
+        
+        // 6. 记录日志
+        Log::info('用户每日积分配额已重置', [
+            'user_id' => $userId,
+            'membership_tier' => $membershipTier,
+            'new_quota' => $newQuota,
+            'previous_consumed' => $oldConsumed,
+            'reset_date' => today()->toDateString(),
+        ]);
+    }
+    
+    /**
+     * 获取用户额度（旧方法，保留兼容性）
+     * 
+     * @deprecated 使用 getBalance() 替代
+     * @param int $userId 用户ID
+     * @return array 额度信息
      */
     public function getCredits(int $userId): array
     {
-        $credits = UserCredit::getOrCreate($userId);
+        $balance = $this->getBalance($userId);
         
         return [
-            'dag_credits' => $credits->dag_credits,
-            'agent_credits' => $credits->agent_credits,
-            'total_credits' => $credits->getTotalCredits(),
+            'dag_credits' => $balance['remaining'],
+            'agent_credits' => $balance['remaining'],
+            'total_credits' => $balance['daily_quota'],
         ];
     }
 

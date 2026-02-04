@@ -1,7 +1,7 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.110.0
-**更新日期**: 2026-02-02
+**版本**: v2.112.0
+**更新日期**: 2026-02-05
 **项目状态**: ✅ 生产运行
 
 ---
@@ -16,6 +16,62 @@
 ---
 
 ## 版本历史
+
+### v2.112.0 (2026-02-05) - 实现积分不足检查方法 ✨
+
+**变更类型**: ✨ 新功能
+
+**新增内容**：
+- **CreditService.checkSufficientCredits()** 方法:
+  - 检查用户剩余积分是否满足本次查询需求
+  - 积分充足时返回 `['sufficient' => true, 'message' => '积分充足', 'remaining' => int]`
+  - 积分不足时返回友好的中文提示消息和升级建议
+  - 自动检查并重置过期的每日配额
+  - 为新用户自动创建积分记录
+
+- **CreditService.getUpgradeMessage()** 辅助方法:
+  - 根据用户当前会员等级返回相应的升级建议
+  - 免费用户 → "升级为暖心会员可获得每日50积分！"
+  - 暖心会员 → "升级为能量会员可获得每日200积分！"
+  - 能量会员 → "明天将重置每日配额。"
+
+**测试覆盖**：
+- 新增 9 个单元测试用例
+- 测试积分充足、积分不足（各会员等级）、边界情况、自动重置、新用户等场景
+- 全部测试通过（30 assertions）
+
+**修改文件**：
+- `app/Services/CreditService.php` - 新增 checkSufficientCredits() 和 getUpgradeMessage() 方法
+- `tests/Unit/CreditServiceTest.php` - 新增 9 个测试用例
+
+**关联需求**: Requirements 5.2, 5.5
+
+---
+
+### v2.111.0 (2026-02-05) - 实现积分流水记录方法 ✨
+
+**变更类型**: ✨ 新功能
+
+**新增内容**：
+- **CreditService.recordTransaction()** 方法:
+  - 记录完整的积分交易信息（tokens、mode、template_name、conversation_id等）
+  - 使用数据库事务确保原子性
+  - 同时扣除用户积分余额（daily_consumed + total_consumed）
+  - 积分不足时抛出异常并回滚事务
+  - 支持参数验证（tokens和mode为必需参数）
+
+**测试覆盖**：
+- 新增 9 个单元测试用例
+- 测试交易记录成功、Agent模式倍率、积分不足异常、参数验证、原子性、累计消耗等场景
+- 全部 30 个测试通过
+
+**修改文件**：
+- `app/Services/CreditService.php` - 新增 recordTransaction() 方法
+- `tests/Unit/CreditServiceTest.php` - 新增 9 个测试用例
+
+**关联需求**: Requirements 3.1, 3.2, 3.3, 5.1
+
+---
 
 ### v2.110.0 (2026-02-02) - 修复主要目标保存问题 🐛
 
