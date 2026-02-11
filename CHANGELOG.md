@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.115.0
+**版本**: v2.116.0
 **更新日期**: 2026-02-12
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,18 @@
 ---
 
 ## 版本历史
+
+### v2.116.0 (2026-02-12) - 生产部署：权限系统重构推送+Zeabur环境变量 🚀
+
+**变更类型**: 🚀 部署
+
+**变更内容**：
+- 推送权限系统重构代码到Zeabur（Internal JWT + Spatie RBAC + fail-closed + 配额检查）
+- 生产数据库迁移：创建Spatie权限表 + 积分体系表
+- Seeder预置3个角色（free/warmheart/energy）和6个权限
+- Zeabur环境变量配置：INTERNAL_JWT_SECRET、INTERNAL_JWT_TTL、INTERNAL_JWT_ISSUER、ENABLE_INTERNAL_JWT
+
+---
 
 ### v2.115.0 (2026-02-12) - 集成接线：Internal JWT转发+配额检查 🔗
 
