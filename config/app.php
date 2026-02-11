@@ -80,9 +80,12 @@ return [
     | This token is used to authenticate internal services like MCP/CrewAI
     | that need to access the API without user authentication.
     |
+    | Security: Token must be at least 32 characters long.
+    | No default value - must be configured via environment variable.
+    |
     */
 
-    'internal_api_token' => env('INTERNAL_API_TOKEN', 'crewai-internal-secret-2025'),
+    'internal_api_token' => env('INTERNAL_API_TOKEN'),
 
     /*
     |--------------------------------------------------------------------------

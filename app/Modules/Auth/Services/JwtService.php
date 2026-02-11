@@ -3,15 +3,19 @@
 namespace App\Modules\Auth\Services;
 
 use App\Modules\User\Models\User;
+use App\Services\PermissionService;
+use App\Services\MembershipService;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Illuminate\Support\Facades\Log;
 
 /**
  * JWT Service
  * 
  * JWT令牌管理服务
+ * External JWT中包含用户权限Claims，供前端解析权限状态
  * 
- * 注意：这是一个简化实现，生产环境建议使用 tymon/jwt-auth 包
+ * @requirements 6.1 - Token刷新时包含新的权限信息
  */
 class JwtService
 {
@@ -28,6 +32,9 @@ class JwtService
 
     /**
      * 生成访问令牌
+     * 包含用户权限Claims（tier、permissions），供前端解析
+     * 
+     * @requirements 6.1
      */
     public function generateToken(User $user): string
     {
@@ -39,6 +46,24 @@ class JwtService
             'username' => $user->username,
             'role' => $user->role,
         ];
+        
+        // 附加权限Claims到External JWT
+        try {
+            $permissionService = app(PermissionService::class);
+            $membershipService = app(MembershipService::class);
+            
+            $tier = $membershipService->getUserTier($user->id);
+            $permissions = $permissionService->getUserPermissions($user->id);
+            
+            $payload['tier'] = $tier;
+            $payload['permissions'] = $permissions;
+        } catch (\Throwable $e) {
+            // 权限查询失败不影响JWT签发，降级为不包含权限Claims
+            Log::warning('JwtService: 附加权限Claims失败，降级签发', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
         
         return JWT::encode($payload, $this->secret, 'HS256');
     }

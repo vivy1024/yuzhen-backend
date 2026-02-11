@@ -45,21 +45,32 @@ class AiProxyController extends BaseController
             'strategy' => $data['strategy'] ?? 'dag'
         ]);
         
-        return new StreamedResponse(function () use ($data) {
+        // 从中间件获取认证头（InternalJwtForward已设置）
+        $authHeaders = [];
+        if ($request->hasHeader('Authorization')) {
+            $authHeaders[] = 'Authorization: ' . $request->header('Authorization');
+        }
+        if ($request->hasHeader('X-Internal-Token')) {
+            $authHeaders[] = 'X-Internal-Token: ' . $request->header('X-Internal-Token');
+        }
+        
+        return new StreamedResponse(function () use ($data, $authHeaders) {
             $url = "{$this->damlRagUrl}/api/v1/chat/stream";
             
             try {
                 // 使用cURL进行流式请求
                 $ch = curl_init();
                 
+                $headers = array_merge([
+                    'Content-Type: application/json',
+                    'Accept: text/event-stream',
+                ], $authHeaders);
+                
                 curl_setopt_array($ch, [
                     CURLOPT_URL => $url,
                     CURLOPT_POST => true,
                     CURLOPT_POSTFIELDS => json_encode($data),
-                    CURLOPT_HTTPHEADER => [
-                        'Content-Type: application/json',
-                        'Accept: text/event-stream',
-                    ],
+                    CURLOPT_HTTPHEADER => $headers,
                     CURLOPT_RETURNTRANSFER => false,
                     CURLOPT_WRITEFUNCTION => function ($ch, $chunk) {
                         echo $chunk;
@@ -123,8 +134,21 @@ class AiProxyController extends BaseController
         ]);
         
         try {
-            $response = Http::timeout(120)
-                ->post("{$this->damlRagUrl}/api/v1/chat", $data);
+            // 构建带认证头的HTTP请求
+            $httpRequest = Http::timeout(120);
+            
+            if ($request->hasHeader('Authorization')) {
+                $httpRequest = $httpRequest->withHeaders([
+                    'Authorization' => $request->header('Authorization'),
+                ]);
+            }
+            if ($request->hasHeader('X-Internal-Token')) {
+                $httpRequest = $httpRequest->withHeaders([
+                    'X-Internal-Token' => $request->header('X-Internal-Token'),
+                ]);
+            }
+            
+            $response = $httpRequest->post("{$this->damlRagUrl}/api/v1/chat", $data);
             
             if ($response->successful()) {
                 return $this->success($response->json(), 'AI对话成功');

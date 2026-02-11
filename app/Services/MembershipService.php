@@ -385,6 +385,21 @@ class MembershipService
         $result = $user->save();
         
         if ($result) {
+            // 同步Spatie角色权限
+            app(PermissionService::class)->syncPermissionsForTier($user, $tier);
+            
+            // 立即清除该用户的权限缓存，确保配额配置即时生效（Requirements 4.5）
+            app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+            
+            // 审计日志：记录会员等级变更（Requirements 8.3）
+            Log::info('[AUDIT] 会员等级变更', [
+                'audit_type' => 'membership_tier_change',
+                'user_id' => $userId,
+                'old_tier' => $oldTier,
+                'new_tier' => $tier,
+                'changed_at' => now()->toIso8601String(),
+            ]);
+            
             Log::info('用户会员等级已更新', [
                 'user_id' => $userId,
                 'old_tier' => $oldTier,

@@ -5,6 +5,8 @@ use App\Modules\User\Controllers\InternalUserController;
 use App\Modules\Membership\Controllers\InternalMembershipController;
 use App\Modules\Chat\Controllers\InternalChatController;
 use App\Modules\Training\Controllers\InternalTrainingController;
+use App\Http\Controllers\Internal\InternalCreditController;
+use App\Http\Controllers\Internal\UsageReportController;
 
 /**
  * Internal API Routes
@@ -58,6 +60,14 @@ Route::prefix('internal')->middleware(['internal.api'])->group(function () {
     Route::get('/personal-bests/{userId}/leaderboard', [InternalTrainingController::class, 'getLeaderboard']);
     Route::get('/personal-bests/{userId}/{exerciseId}', [InternalTrainingController::class, 'getPersonalBest']);
     Route::post('/personal-bests/{userId}/update', [InternalTrainingController::class, 'updatePersonalBest']);
+    
+    // 积分消耗记录API（为DAML-RAG提供）
+    // @requirements 10.1 - DAML-RAG工作流完成后上报Token消耗
+    Route::post('/credits/record', [InternalCreditController::class, 'recordConsumption']);
+    
+    // 用量上报API（为DAML-RAG权限系统重构提供）
+    // @requirements 4.3 - DAML-RAG完成AI查询后上报用量
+    Route::post('/usage/report', [UsageReportController::class, 'report']);
     
 });
 
