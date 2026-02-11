@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.116.0
+**版本**: v2.117.0
 **更新日期**: 2026-02-12
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,25 @@
 ---
 
 ## 版本历史
+
+### v2.117.0 (2026-02-12) - 修复CORS：添加warmup代理路由 🐛
+
+**变更类型**: 🐛 Bug修复
+
+**问题描述**：
+- 前端直接请求 `ai.yuzhen-fitness.cn`（DAML-RAG）导致CORS错误
+- warmup预热接口未通过PHP后端代理
+
+**修复内容**：
+- 添加warmup代理路由：`POST /api/ai/v1/user/warmup` 和 `GET /api/ai/v1/user/warmup/status/{userId}`
+- AiProxyController新增 `warmup()` 和 `warmupStatus()` 方法，代理转发到DAML-RAG
+- AI请求统一走PHP后端代理，由后端签发Internal JWT
+
+**修改文件**：
+- `routes/api.php` - 添加warmup代理路由（jwt.auth中间件）
+- `app/Http/Controllers/AiProxyController.php` - 新增warmup和warmupStatus方法
+
+---
 
 ### v2.116.0 (2026-02-12) - 生产部署：权限系统重构推送+Zeabur环境变量 🚀
 
