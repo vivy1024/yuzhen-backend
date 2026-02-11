@@ -1,7 +1,7 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.114.0
-**更新日期**: 2026-02-11
+**版本**: v2.115.0
+**更新日期**: 2026-02-12
 **项目状态**: ✅ 生产运行
 
 ---
@@ -16,6 +16,22 @@
 ---
 
 ## 版本历史
+
+### v2.115.0 (2026-02-12) - 集成接线：Internal JWT转发+配额检查 🔗
+
+**变更类型**: ✨ 新功能
+
+**变更内容**：
+- AI代理路由添加`internal.jwt.forward`中间件，转发请求时自动签发Internal JWT
+- AiProxyController转发请求时携带Authorization/X-Internal-Token认证头
+- .env和.env.production添加ENABLE_INTERNAL_JWT开关（初始false）
+
+**修改文件**：
+- `routes/api.php` - AI代理路由中间件链
+- `app/Http/Controllers/AiProxyController.php` - 认证头转发
+- `.env` / `.env.production` - ENABLE_INTERNAL_JWT配置
+
+---
 
 ### v2.114.0 (2026-02-11) - Spatie权限系统集成 🔐
 

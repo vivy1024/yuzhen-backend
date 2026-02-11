@@ -129,4 +129,19 @@ return [
     'jwt_ttl' => env('JWT_TTL', 3600), // 默认1小时
     'jwt_refresh_ttl' => env('JWT_REFRESH_TTL', 604800), // 默认7天
 
+    /*
+    |--------------------------------------------------------------------------
+    | Internal JWT Configuration (服务间通信)
+    |--------------------------------------------------------------------------
+    |
+    | PHP后端签发给DAML-RAG的内部JWT配置
+    | 密钥必须与External JWT (JWT_SECRET) 不同
+    |
+    */
+
+    'internal_jwt_secret' => env('INTERNAL_JWT_SECRET'),
+    'internal_jwt_ttl' => env('INTERNAL_JWT_TTL', 60), // 默认60秒，不超过60
+    'internal_jwt_issuer' => env('INTERNAL_JWT_ISSUER', 'yuzhen-auth-gateway'),
+    'enable_internal_jwt' => env('ENABLE_INTERNAL_JWT', false), // 是否启用Internal JWT转发（迁移期开关）
+
 ];

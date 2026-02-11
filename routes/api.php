@@ -470,6 +470,9 @@ require __DIR__.'/modules/membership.php';
 // Usage模块（用量管理）✅
 require __DIR__.'/modules/usage.php';
 
+// Credit模块（积分管理）✅
+require __DIR__.'/modules/credit.php';
+
 // Internal API（MCP/CrewAI访问）✅
 require __DIR__.'/internal.php';
 
@@ -518,12 +521,12 @@ require __DIR__.'/modules/help.php';
 | 注意：使用api中间件组，自动处理CORS，无需CSRF验证
 */
 Route::prefix('ai')->group(function () {
-    // 流式聊天接口
-    Route::post('/v1/chat/stream', [\App\Http\Controllers\AiProxyController::class, 'streamChat']);
+    // 流式/非流式聊天接口（需要JWT认证 + 配额检查 + Internal JWT转发）
+    Route::middleware(['jwt.auth', 'quota.check', 'internal.jwt.forward'])->group(function () {
+        Route::post('/v1/chat/stream', [\App\Http\Controllers\AiProxyController::class, 'streamChat']);
+        Route::post('/v1/chat', [\App\Http\Controllers\AiProxyController::class, 'chat']);
+    });
     
-    // 非流式聊天接口
-    Route::post('/v1/chat', [\App\Http\Controllers\AiProxyController::class, 'chat']);
-    
-    // 健康检查
+    // 健康检查（无需认证）
     Route::get('/health', [\App\Http\Controllers\AiProxyController::class, 'health']);
 });

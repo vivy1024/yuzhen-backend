@@ -42,6 +42,16 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
+    /**
+     * 创建模型对应的工厂实例
+     * 
+     * 由于User模型在Modules命名空间下，需要手动指定Factory路径
+     */
+    protected static function newFactory()
+    {
+        return \Database\Factories\UserFactory::new();
+    }
+
     protected $table = 'users';
 
     /**

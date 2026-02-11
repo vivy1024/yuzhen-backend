@@ -21,6 +21,7 @@ class Kernel extends HttpKernel
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+        \App\Http\Middleware\SecurityHeaders::class, // ✅ 安全响应头中间件（Requirements 10.1-10.5）
     ];
 
     /**
@@ -65,6 +66,8 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'internal.api' => \App\Infrastructure\Http\Middleware\InternalApiAuth::class,
+        'quota.check' => \App\Infrastructure\Http\Middleware\QuotaCheck::class, // ✅ 配额检查中间件（Requirements 4.1, 4.2）
+        'internal.jwt.forward' => \App\Infrastructure\Http\Middleware\InternalJwtForward::class, // ✅ Internal JWT转发中间件（Requirements 2.1, 7.3）
         'jwt.auth' => \App\Modules\Auth\Middleware\JwtAuthenticate::class, // ✅ JWT认证中间件
         'admin' => \App\Http\Middleware\AdminMiddleware::class, // ✅ 管理员中间件
     ];

@@ -126,6 +126,24 @@ return [
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | Security Log Channel
+        |--------------------------------------------------------------------------
+        |
+        | This channel is used for security-related events such as authentication
+        | failures, admin actions, and configuration changes.
+        | Logs are retained for 90 days as per security requirements.
+        |
+        */
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'debug',
+            'days' => 90,
+            'replace_placeholders' => true,
+        ],
     ],
 
 ];

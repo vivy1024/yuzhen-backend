@@ -147,21 +147,27 @@ class UserProfileRestPatternTest extends TestCase
 
     /**
      * 测试：获取推荐的休息模式（基于训练水平）
+     * 
+     * 实际映射关系（统一4级标准）：
+     * novice(零基础) → 练一休一
+     * beginner(初级) → 练二休一
+     * intermediate(中级) → 练三休一
+     * advanced(高级) → 练四休一
      */
     public function test_get_recommended_rest_pattern()
     {
-        // 初学者
+        // 零基础
         $this->profile->update([
             'basic_info' => array_merge($this->profile->basic_info, [
-                'fitness_level' => 'beginner',
+                'fitness_level' => 'novice',
             ]),
         ]);
         $this->assertEquals('练一休一', $this->profile->getRecommendedRestPattern());
 
-        // 新手
+        // 初级
         $this->profile->update([
             'basic_info' => array_merge($this->profile->basic_info, [
-                'fitness_level' => 'novice',
+                'fitness_level' => 'beginner',
             ]),
         ]);
         $this->assertEquals('练二休一', $this->profile->getRecommendedRestPattern());

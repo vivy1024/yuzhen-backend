@@ -8,27 +8,51 @@ return [
     |--------------------------------------------------------------------------
     |
     | 配置CORS允许前端访问API
+    | 安全加固：使用明确的域名白名单和请求头列表，不使用通配符
     |
     */
 
     'paths' => ['api/*', 'ai/*', 'sanctum/csrf-cookie'],
 
-    'allowed_methods' => ['*'],
+    // 明确的HTTP方法列表，不使用通配符
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => [
-        'https://app.yuzhen-fitness.cn',
-        'https://yuzhen-fitness.cn',
-        'https://www.yuzhen-fitness.cn',
-        'http://localhost:9000', // 本地开发
-    ],
+    // 根据环境区分允许的域名
+    // 生产环境：仅允许yuzhen-fitness.cn及其子域名
+    // 开发环境：允许localhost相关域名
+    'allowed_origins' => env('APP_ENV') === 'production'
+        ? [
+            'https://app.yuzhen-fitness.cn',
+            'https://yuzhen-fitness.cn',
+            'https://www.yuzhen-fitness.cn',
+        ]
+        : [
+            'http://localhost:9000',
+            'http://127.0.0.1:9000',
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+        ],
 
+    // 不使用模式匹配，避免反射攻击
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['*'],
+    // 明确允许的请求头，不使用通配符
+    'allowed_headers' => [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'X-Internal-Token',
+        'Accept',
+        'Origin',
+        'X-CSRF-TOKEN',
+    ],
 
     'exposed_headers' => [],
 
-    'max_age' => 0,
+    // 预检请求缓存时间（秒）
+    'max_age' => 7200,
 
     'supports_credentials' => true,
 
