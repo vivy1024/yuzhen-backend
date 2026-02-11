@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 use App\Models\UserMembership;
 use App\Models\Membership;
 use App\Models\TrainingLog;
@@ -39,9 +40,14 @@ use App\Models\Referral;
  */
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     protected $table = 'users';
+
+    /**
+     * Spatie Permission guard - 使用api guard
+     */
+    protected $guard_name = 'api';
 
     /**
      * The attributes that are mass assignable.

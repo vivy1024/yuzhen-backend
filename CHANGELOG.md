@@ -1,7 +1,7 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.112.0
-**更新日期**: 2026-02-05
+**版本**: v2.114.0
+**更新日期**: 2026-02-11
 **项目状态**: ✅ 生产运行
 
 ---
@@ -16,6 +16,67 @@
 ---
 
 ## 版本历史
+
+### v2.114.0 (2026-02-11) - Spatie权限系统集成 🔐
+
+**变更类型**: ✨ 新功能
+
+**新增内容**：
+- **Spatie/laravel-permission集成**:
+  - 发布迁移文件，创建roles、permissions、model_has_roles、model_has_permissions、role_has_permissions表
+  - User模型添加HasRoles trait，指定api guard
+  - auth.php添加api guard配置（sanctum驱动）
+  - config/permission.php配置文件发布
+
+- **RolePermissionSeeder预置数据**:
+  - 角色：free、warmheart、energy（guard: api）
+  - 权限：dag:query、dag:template:*、agent:query、profile:read、profile:write、analysis:advanced
+  - 角色-权限映射：free(2权限)、warmheart(4权限)、energy(6权限)
+
+---
+
+### v2.113.0 (2026-02-05) - 积分系统完整实现 ✨
+
+**变更类型**: ✨ 新功能
+
+**新增内容**：
+- **积分系统数据库迁移**:
+  - `user_credits` 表：用户积分余额
+  - `credit_transactions` 表：积分流水记录
+  - `credit_shares` 表：积分分享记录（阶段2预留）
+
+- **积分系统Model层**:
+  - `UserCredit` 模型：remaining访问器、needsReset()方法
+  - `CreditTransaction` 模型：scope查询方法
+  - `CreditShare` 模型：sender/receiver关联
+
+- **CreditService核心服务**:
+  - `calculateCredits()` - 积分计算（DAG 1.0x, Agent 1.5x）
+  - `getBalance()` - 余额查询
+  - `recordTransaction()` - 流水记录
+  - `resetDailyQuota()` - 每日配额重置
+  - `checkSufficientCredits()` - 积分不足检查
+
+- **API Controller**:
+  - `CreditController` - 用户积分API（balance/history/stats）
+  - `InternalCreditController` - 内部API（DAML-RAG调用）
+
+**测试覆盖**：
+- 47 个单元测试用例，154 assertions
+- 全部测试通过
+
+**修改文件**：
+- `database/migrations/` - 3个迁移文件
+- `app/Models/` - UserCredit, CreditTransaction, CreditShare
+- `app/Services/CreditService.php` - 核心服务
+- `app/Http/Controllers/Api/CreditController.php` - API控制器
+- `app/Http/Controllers/Internal/InternalCreditController.php` - 内部API
+- `routes/modules/credit.php` - 路由配置
+- `routes/internal.php` - 内部路由
+
+**关联需求**: Requirements 1.1-1.5, 2.1-2.5, 3.1-3.5, 4.1-4.5, 5.1-5.5, 9.1-9.5, 10.1
+
+---
 
 ### v2.112.0 (2026-02-05) - 实现积分不足检查方法 ✨
 
