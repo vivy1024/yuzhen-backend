@@ -187,4 +187,53 @@ class AiProxyController extends BaseController
             return $this->handleException($e, 'AI健康检查');
         }
     }
+
+    /**
+     * 用户预热接口代理
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function warmup(Request $request)
+    {
+        $data = $request->all();
+
+        try {
+            $response = Http::timeout(10)
+                ->post("{$this->damlRagUrl}/api/v1/user/warmup", $data);
+
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+
+            return $this->fail('预热服务响应错误', $response->status());
+
+        } catch (\Exception $e) {
+            return $this->handleException($e, '用户预热');
+        }
+    }
+
+    /**
+     * 用户预热状态查询代理
+     *
+     * @param string $userId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function warmupStatus(string $userId)
+    {
+        try {
+            $response = Http::timeout(10)
+                ->get("{$this->damlRagUrl}/api/v1/user/warmup/status/{$userId}");
+
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+
+            return $this->fail('预热状态查询失败', $response->status());
+
+        } catch (\Exception $e) {
+            return $this->handleException($e, '预热状态查询');
+        }
+    }
+
 }
