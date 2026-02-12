@@ -63,9 +63,13 @@ class InternalJwtForward
                     'error' => $e->getMessage(),
                 ]);
 
+                // 关键：移除原始Authorization头（外部JWT），避免DAML-RAG误判
+                $request->headers->remove('Authorization');
                 $this->attachInternalToken($request);
             }
         } else {
+            // 旧模式：移除Authorization头，仅用X-Internal-Token
+            $request->headers->remove('Authorization');
             $this->attachInternalToken($request);
         }
 
