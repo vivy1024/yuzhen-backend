@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.119.0
+**版本**: v2.120.0
 **更新日期**: 2026-02-12
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,22 @@
 ---
 
 ## 版本历史
+
+### v2.120.0 (2026-02-12) - 修复AI对话SSE流式请求失败 🔧
+
+**变更类型**: 🔧 修复
+
+**变更内容**：
+- 修复双重CORS头冲突：移除`AiProxyController::streamChat`中`StreamedResponse`的CORS头，由nginx统一处理
+- 修复`ob_flush()`错误：添加`ob_get_level() > 0`检查
+- 修复Internal JWT降级时外部JWT泄露：`InternalJwtForward`在降级到X-Internal-Token前移除Authorization头
+- 添加AI代理转发认证头日志，便于生产环境调试
+
+**修改文件**：
+- `app/Http/Controllers/AiProxyController.php` - 移除StreamedResponse CORS头 + 修复ob_flush + 添加认证日志
+- `app/Infrastructure/Http/Middleware/InternalJwtForward.php` - 降级时移除Authorization头
+
+---
 
 ### v2.119.0 (2026-02-12) - 添加Capacitor移动端CORS支持 🔧
 

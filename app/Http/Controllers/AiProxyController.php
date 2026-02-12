@@ -54,6 +54,14 @@ class AiProxyController extends BaseController
             $authHeaders[] = 'X-Internal-Token: ' . $request->header('X-Internal-Token');
         }
         
+        Log::info('[AiProxy] 转发认证头', [
+            'has_authorization' => $request->hasHeader('Authorization'),
+            'has_internal_token' => $request->hasHeader('X-Internal-Token'),
+            'auth_prefix' => $request->hasHeader('Authorization') 
+                ? substr($request->header('Authorization'), 0, 20) . '...' 
+                : 'none',
+        ]);
+        
         return new StreamedResponse(function () use ($data, $authHeaders) {
             $url = "{$this->damlRagUrl}/api/v1/chat/stream";
             
@@ -74,7 +82,9 @@ class AiProxyController extends BaseController
                     CURLOPT_RETURNTRANSFER => false,
                     CURLOPT_WRITEFUNCTION => function ($ch, $chunk) {
                         echo $chunk;
-                        ob_flush();
+                        if (ob_get_level() > 0) {
+                            ob_flush();
+                        }
                         flush();
                         return strlen($chunk);
                     },
@@ -111,9 +121,7 @@ class AiProxyController extends BaseController
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',
             'X-Accel-Buffering' => 'no', // 禁用nginx缓冲
-            'Access-Control-Allow-Origin' => '*',
-            'Access-Control-Allow-Methods' => 'POST, OPTIONS',
-            'Access-Control-Allow-Headers' => 'Content-Type, Authorization',
+            // 注意：不在这里设置CORS头，由nginx统一处理，避免双重CORS头导致浏览器拒绝
         ]);
     }
 
