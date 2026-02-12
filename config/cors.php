@@ -18,13 +18,15 @@ return [
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
     // 根据环境区分允许的域名
-    // 生产环境：仅允许yuzhen-fitness.cn及其子域名
+    // 生产环境：仅允许yuzhen-fitness.cn及其子域名 + Capacitor移动端
     // 开发环境：允许localhost相关域名
     'allowed_origins' => env('APP_ENV') === 'production'
         ? [
             'https://app.yuzhen-fitness.cn',
             'https://yuzhen-fitness.cn',
             'https://www.yuzhen-fitness.cn',
+            'capacitor://localhost',
+            'https://localhost',
         ]
         : [
             'http://localhost:9000',
@@ -33,6 +35,8 @@ return [
             'http://127.0.0.1:5173',
             'http://localhost:3000',
             'http://127.0.0.1:3000',
+            'capacitor://localhost',
+            'https://localhost',
         ],
 
     // 不使用模式匹配，避免反射攻击

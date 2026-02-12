@@ -1,6 +1,6 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.118.0
+**版本**: v2.119.0
 **更新日期**: 2026-02-12
 **项目状态**: ✅ 生产运行
 
@@ -16,6 +16,19 @@
 ---
 
 ## 版本历史
+
+### v2.119.0 (2026-02-12) - 添加Capacitor移动端CORS支持 🔧
+
+**变更类型**: 🔧 修复
+
+**变更内容**：
+- `config/cors.php` 生产和开发环境均添加 `capacitor://localhost` 和 `https://localhost` origin
+- 解决Capacitor Android WebView因CORS被拒导致无法登录的问题
+
+**修改文件**：
+- `config/cors.php` - 添加移动端origin白名单
+
+---
 
 ### v2.118.0 (2026-02-12) - Dockerfile构建缓存优化 ⚡
 
