@@ -1,7 +1,7 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.120.0
-**更新日期**: 2026-02-12
+**版本**: v2.121.0
+**更新日期**: 2026-02-16
 **项目状态**: ✅ 生产运行
 
 ---
@@ -16,6 +16,28 @@
 ---
 
 ## 版本历史
+
+### v2.121.0 (2026-02-16) - 添加InternalJwtService属性测试 ✅
+
+**变更类型**: ✅ 测试
+
+**变更内容**：
+- 添加InternalJwtService属性测试（Property 3 + Property 5）
+- 验证Internal JWT包含完整Permission Claims（sub/tier/permissions/daily_dag_limit/daily_agent_limit/iat/exp/iss）
+- 验证Internal JWT过期时间不超过60秒（参数化测试覆盖4种TTL配置）
+- 验证JWT签名可验证性、密钥长度验证、Internal JWT与External JWT密钥不同
+
+**新增文件**：
+- `tests/Unit/Services/InternalJwtServicePropertyTest.php` - InternalJwtService属性测试
+
+**测试覆盖**：
+- 3种会员等级（free/warmheart/energy）的Permission Claims完整性
+- 4种TTL配置（30/60/120/300秒）的过期时间限制
+- 密钥配置验证（长度不足、与External JWT密钥相同）
+
+**Requirements**: 2.1, 2.2, 2.6
+
+---
 
 ### v2.120.0 (2026-02-12) - 修复AI对话SSE流式请求失败 🔧
 
