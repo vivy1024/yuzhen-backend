@@ -114,10 +114,33 @@ class InternalCreditController extends BaseController
             $tokens = $validated['tokens'];
             $mode = $validated['mode'];
 
-            // 2. 计算积分消耗
+            // 2. 幂等性检查：conversation_id 去重，防止重试导致重复扣积分
+            if (!empty($validated['conversation_id'])) {
+                $existing = \App\Models\CreditTransaction::where('conversation_id', $validated['conversation_id'])
+                    ->where('user_id', $userId)
+                    ->first();
+
+                if ($existing) {
+                    $balance = $this->creditService->getBalance($userId);
+                    Log::info('DAML-RAG积分记录跳过（幂等）：conversation_id已存在', [
+                        'user_id' => $userId,
+                        'conversation_id' => $validated['conversation_id'],
+                        'existing_transaction_id' => $existing->id,
+                    ]);
+
+                    return $this->success([
+                        'transaction_id' => $existing->id,
+                        'credits_consumed' => $existing->credits,
+                        'remaining_credits' => $balance['remaining'],
+                        'idempotent' => true,
+                    ], 'success');
+                }
+            }
+
+            // 3. 计算积分消耗
             $creditsToConsume = $this->creditService->calculateCredits($tokens, $mode);
 
-            // 3. 检查用户积分是否足够
+            // 4. 检查用户积分是否足够
             $checkResult = $this->creditService->checkSufficientCredits($userId, $creditsToConsume);
             
             if (!$checkResult['sufficient']) {
@@ -140,7 +163,7 @@ class InternalCreditController extends BaseController
                 ], 402);
             }
 
-            // 4. 记录积分消耗（同时扣除积分）
+            // 5. 记录积分消耗（同时扣除积分）
             $transaction = $this->creditService->recordTransaction($userId, [
                 'tokens' => $tokens,
                 'mode' => $mode,
@@ -151,7 +174,7 @@ class InternalCreditController extends BaseController
                 'description' => "DAML-RAG {$mode}模式消耗",
             ]);
 
-            // 5. 获取更新后的余额
+            // 6. 获取更新后的余额
             $balance = $this->creditService->getBalance($userId);
 
             Log::info('DAML-RAG积分记录成功', [
