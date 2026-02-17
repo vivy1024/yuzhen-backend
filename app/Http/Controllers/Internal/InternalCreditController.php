@@ -114,35 +114,12 @@ class InternalCreditController extends BaseController
             $tokens = $validated['tokens'];
             $mode = $validated['mode'];
 
-            // 2. 幂等性检查：conversation_id 去重，防止重试导致重复扣积分
-            if (!empty($validated['conversation_id'])) {
-                $existing = \App\Models\CreditTransaction::where('conversation_id', $validated['conversation_id'])
-                    ->where('user_id', $userId)
-                    ->first();
-
-                if ($existing) {
-                    $balance = $this->creditService->getBalance($userId);
-                    Log::info('DAML-RAG积分记录跳过（幂等）：conversation_id已存在', [
-                        'user_id' => $userId,
-                        'conversation_id' => $validated['conversation_id'],
-                        'existing_transaction_id' => $existing->id,
-                    ]);
-
-                    return $this->success([
-                        'transaction_id' => $existing->id,
-                        'credits_consumed' => $existing->credits,
-                        'remaining_credits' => $balance['remaining'],
-                        'idempotent' => true,
-                    ], 'success');
-                }
-            }
-
-            // 3. 计算积分消耗
+            // 2. 计算积分消耗（无副作用，可在事务外执行）
             $creditsToConsume = $this->creditService->calculateCredits($tokens, $mode);
 
-            // 4. 检查用户积分是否足够
+            // 3. 快速检查积分是否足够（避免不必要的事务开销）
             $checkResult = $this->creditService->checkSufficientCredits($userId, $creditsToConsume);
-            
+
             if (!$checkResult['sufficient']) {
                 Log::warning('DAML-RAG积分记录失败：积分不足', [
                     'user_id' => $userId,
@@ -151,9 +128,9 @@ class InternalCreditController extends BaseController
                     'required_credits' => $creditsToConsume,
                     'remaining_credits' => $checkResult['remaining'],
                 ]);
-                
+
                 return response()->json([
-                    'code' => 402, // Payment Required
+                    'code' => 402,
                     'msg' => $checkResult['message'],
                     'data' => [
                         'remaining_credits' => $checkResult['remaining'],
@@ -163,35 +140,58 @@ class InternalCreditController extends BaseController
                 ], 402);
             }
 
-            // 5. 记录积分消耗（同时扣除积分）
-            $transaction = $this->creditService->recordTransaction($userId, [
-                'tokens' => $tokens,
-                'mode' => $mode,
-                'template_name' => $validated['template_name'] ?? null,
-                'conversation_id' => $validated['conversation_id'] ?? null,
-                'input_tokens' => $validated['input_tokens'] ?? 0,
-                'output_tokens' => $validated['output_tokens'] ?? 0,
-                'description' => "DAML-RAG {$mode}模式消耗",
-            ]);
+            // 4. 事务内执行：幂等性检查 + 积分扣减（原子化，防止TOCTOU竞态）
+            $result = \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $userId, $tokens, $mode) {
+                // 幂等性检查（lockForUpdate防止并发重复插入）
+                if (!empty($validated['conversation_id'])) {
+                    $existing = \App\Models\CreditTransaction::where('conversation_id', $validated['conversation_id'])
+                        ->where('user_id', $userId)
+                        ->lockForUpdate()
+                        ->first();
 
-            // 6. 获取更新后的余额
+                    if ($existing) {
+                        return ['idempotent' => true, 'transaction' => $existing];
+                    }
+                }
+
+                // 记录积分消耗（CreditService::recordTransaction内部有lockForUpdate）
+                $transaction = $this->creditService->recordTransaction($userId, [
+                    'tokens' => $tokens,
+                    'mode' => $mode,
+                    'template_name' => $validated['template_name'] ?? null,
+                    'conversation_id' => $validated['conversation_id'] ?? null,
+                    'input_tokens' => $validated['input_tokens'] ?? 0,
+                    'output_tokens' => $validated['output_tokens'] ?? 0,
+                    'description' => "DAML-RAG {$mode}模式消耗",
+                ]);
+
+                return ['idempotent' => false, 'transaction' => $transaction];
+            });
+
+            // 5. 获取余额并返回
             $balance = $this->creditService->getBalance($userId);
+            $transaction = $result['transaction'];
 
-            Log::info('DAML-RAG积分记录成功', [
-                'user_id' => $userId,
-                'transaction_id' => $transaction->id,
-                'tokens' => $tokens,
-                'mode' => $mode,
-                'credits_consumed' => $transaction->credits,
-                'remaining_credits' => $balance['remaining'],
-                'template_name' => $validated['template_name'] ?? null,
-                'conversation_id' => $validated['conversation_id'] ?? null,
-            ]);
+            if ($result['idempotent']) {
+                Log::info('DAML-RAG积分记录跳过（幂等）', [
+                    'user_id' => $userId,
+                    'conversation_id' => $validated['conversation_id'],
+                    'existing_transaction_id' => $transaction->id,
+                ]);
+            } else {
+                Log::info('DAML-RAG积分记录成功', [
+                    'user_id' => $userId,
+                    'transaction_id' => $transaction->id,
+                    'credits_consumed' => $transaction->credits,
+                    'remaining_credits' => $balance['remaining'],
+                ]);
+            }
 
             return $this->success([
                 'transaction_id' => $transaction->id,
                 'credits_consumed' => $transaction->credits,
                 'remaining_credits' => $balance['remaining'],
+                'idempotent' => $result['idempotent'],
             ], 'success');
 
         } catch (\Exception $e) {
@@ -204,8 +204,8 @@ class InternalCreditController extends BaseController
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // 返回错误但使用500状态码，让DAML-RAG知道记录失败
-            return $this->fail('积分记录失败: ' . $e->getMessage(), 500);
+            // 返回通用错误消息，不泄露内部异常详情
+            return $this->fail('积分记录失败，请稍后重试', 500);
         }
     }
 }
