@@ -9,7 +9,7 @@
         "alibabacloud/dypnsapi-20170525": "^2.0",
         "alibabacloud/dysmsapi-20170525": "^4.3",
         "doctrine/dbal": "^3.9",
-        "firebase/php-jwt": "^6.11",
+        "firebase/php-jwt": "^6.12",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^10.10",
         "laravel/sanctum": "^3.3",
