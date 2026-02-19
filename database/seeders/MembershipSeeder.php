@@ -24,20 +24,20 @@ class MembershipSeeder extends Seeder
      * 
      * 免费版：
      * - 基础功能 + 有限AI对话
-     * - DAG: 10次/天, Agent: 0次/天
+     * - DAG: 10次/天, Agent: 5次/天
      * - 2个基础DAG模板
-     * 
+     *
      * 暖心会员（WARMHEART）：
      * - 月卡¥6, 季卡¥15, 年卡¥50
      * - 首充体验¥1/7天
-     * - DAG: 30次/天, Agent: 0次/天
+     * - DAG: 30次/天, Agent: 10次/天
      * - 全部13个DAG模板
-     * 
+     *
      * 能量会员（ENERGY）：
      * - 月卡¥29, 季卡¥69, 年卡¥199
      * - 首充体验¥9/7天
      * - DAG: 无限, Agent: 无限
-     * - 全部13个DAG模板 + Agent模式
+     * - 全部13个DAG模板 + 无限Agent
      * 
      * 成本分析（基于DeepSeek API）：
      * - 单次DAG模板执行：~¥0.05
@@ -79,16 +79,16 @@ class MembershipSeeder extends Seeder
                     '✅ TDEE/BMI/FFMI计算器',
                     '✅ 最多3个训练计划',
                     '📊 DAG查询 10次/天',
+                    '📊 Agent查询 5次/天',
                     '📊 2个基础AI场景',
-                    '❌ Agent模式不可用'
                 ], JSON_UNESCAPED_UNICODE),
                 'limits' => json_encode([
                     'daily_dag_limit' => 10,
-                    'daily_agent_limit' => 0,
+                    'daily_agent_limit' => 5,
                     'training_plans' => 3,
                     'dag_templates' => $freeTemplates,
                     'dag_template_count' => 2,
-                    'can_use_agent' => false,
+                    'can_use_agent' => true,
                     'advanced_analysis' => false
                 ], JSON_UNESCAPED_UNICODE),
                 'is_first_purchase' => false,
@@ -114,6 +114,7 @@ class MembershipSeeder extends Seeder
                     '🎁 首充专享价 ¥1',
                     '✅ 全部13个AI场景',
                     '📊 DAG查询 30次/天',
+                    '📊 Agent查询 10次/天',
                     '✅ 完整训练计划生成',
                     '✅ 营养规划方案',
                     '✅ 最多10个训练计划',
@@ -121,11 +122,11 @@ class MembershipSeeder extends Seeder
                 ], JSON_UNESCAPED_UNICODE),
                 'limits' => json_encode([
                     'daily_dag_limit' => 30,
-                    'daily_agent_limit' => 0,
+                    'daily_agent_limit' => 10,
                     'training_plans' => 10,
                     'dag_templates' => $allTemplates,
                     'dag_template_count' => 13,
-                    'can_use_agent' => false,
+                    'can_use_agent' => true,
                     'advanced_analysis' => true
                 ], JSON_UNESCAPED_UNICODE),
                 'is_first_purchase' => true,
@@ -144,11 +145,12 @@ class MembershipSeeder extends Seeder
                 'ai_recommendation' => true,
                 'data_analysis' => true,
                 'coach_service' => false,
-                'description' => '暖心会员月卡，全部AI场景解锁，每日30次DAG查询。',
+                'description' => '暖心会员月卡，全部AI场景解锁，每日30次DAG + 10次Agent查询。',
                 'features' => json_encode([
                     '💰 ¥6/月',
                     '✅ 全部13个AI场景',
                     '📊 DAG查询 30次/天',
+                    '📊 Agent查询 10次/天',
                     '✅ 完整训练计划生成',
                     '✅ 营养规划方案',
                     '✅ 最多10个训练计划',
@@ -156,11 +158,11 @@ class MembershipSeeder extends Seeder
                 ], JSON_UNESCAPED_UNICODE),
                 'limits' => json_encode([
                     'daily_dag_limit' => 30,
-                    'daily_agent_limit' => 0,
+                    'daily_agent_limit' => 10,
                     'training_plans' => 10,
                     'dag_templates' => $allTemplates,
                     'dag_template_count' => 13,
-                    'can_use_agent' => false,
+                    'can_use_agent' => true,
                     'advanced_analysis' => true
                 ], JSON_UNESCAPED_UNICODE),
                 'is_first_purchase' => false,
@@ -185,6 +187,7 @@ class MembershipSeeder extends Seeder
                     '🔥 省¥12',
                     '✅ 全部13个AI场景',
                     '📊 DAG查询 30次/天',
+                    '📊 Agent查询 10次/天',
                     '✅ 完整训练计划生成',
                     '✅ 营养规划方案',
                     '✅ 最多10个训练计划',
@@ -192,11 +195,11 @@ class MembershipSeeder extends Seeder
                 ], JSON_UNESCAPED_UNICODE),
                 'limits' => json_encode([
                     'daily_dag_limit' => 30,
-                    'daily_agent_limit' => 0,
+                    'daily_agent_limit' => 10,
                     'training_plans' => 10,
                     'dag_templates' => $allTemplates,
                     'dag_template_count' => 13,
-                    'can_use_agent' => false,
+                    'can_use_agent' => true,
                     'advanced_analysis' => true
                 ], JSON_UNESCAPED_UNICODE),
                 'is_first_purchase' => false,
@@ -221,6 +224,7 @@ class MembershipSeeder extends Seeder
                     '🔥 省¥58',
                     '✅ 全部13个AI场景',
                     '📊 DAG查询 30次/天',
+                    '📊 Agent查询 10次/天',
                     '✅ 完整训练计划生成',
                     '✅ 营养规划方案',
                     '✅ 最多10个训练计划',
@@ -228,11 +232,11 @@ class MembershipSeeder extends Seeder
                 ], JSON_UNESCAPED_UNICODE),
                 'limits' => json_encode([
                     'daily_dag_limit' => 30,
-                    'daily_agent_limit' => 0,
+                    'daily_agent_limit' => 10,
                     'training_plans' => 10,
                     'dag_templates' => $allTemplates,
                     'dag_template_count' => 13,
-                    'can_use_agent' => false,
+                    'can_use_agent' => true,
                     'advanced_analysis' => true
                 ], JSON_UNESCAPED_UNICODE),
                 'is_first_purchase' => false,
@@ -402,17 +406,17 @@ class MembershipSeeder extends Seeder
         $this->command->info('✅ 会员套餐数据初始化完成');
         $this->command->info('');
         $this->command->info('📦 套餐列表（共9种）：');
-        $this->command->info('   免费版: ¥0 (DAG 10次/天, 2个模板)');
+        $this->command->info('   免费版: ¥0 (DAG 10次/天, Agent 5次/天, 2个模板)');
         $this->command->info('');
         $this->command->info('   暖心会员（WARMHEART）：');
         $this->command->info('   - 暖心7天体验: ¥1 (首充专享)');
-        $this->command->info('   - 暖心月卡: ¥6/30天');
+        $this->command->info('   - 暖心月卡: ¥6/30天 (DAG 30次 + Agent 10次/天)');
         $this->command->info('   - 暖心季卡: ¥15/90天');
         $this->command->info('   - 暖心年卡: ¥50/365天');
         $this->command->info('');
         $this->command->info('   能量会员（ENERGY）：');
         $this->command->info('   - 能量7天体验: ¥9 (首充专享)');
-        $this->command->info('   - 能量月卡: ¥29/30天');
+        $this->command->info('   - 能量月卡: ¥29/30天 (DAG+Agent 无限)');
         $this->command->info('   - 能量季卡: ¥69/90天');
         $this->command->info('   - 能量年卡: ¥199/365天');
     }
