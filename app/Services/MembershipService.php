@@ -41,16 +41,16 @@ class MembershipService
     const TIER_LIMITS = [
         self::TIER_FREE => [
             'daily_dag_limit' => 5,
-            'daily_agent_limit' => 0,
-            'can_use_agent' => false,
+            'daily_agent_limit' => 5,
+            'can_use_agent' => true,
             'dag_templates' => ['greeting', 'simple_exercise_query'],
             'training_plan_limit' => 3,
             'advanced_analysis' => false,
         ],
         self::TIER_WARMHEART => [
             'daily_dag_limit' => 10,
-            'daily_agent_limit' => 0,
-            'can_use_agent' => false,
+            'daily_agent_limit' => 10,
+            'can_use_agent' => true,
             'dag_templates' => [
                 'greeting', 'simple_exercise_query', 'exercise_detail',
                 'muscle_exercise_query', 'equipment_exercise_query',
