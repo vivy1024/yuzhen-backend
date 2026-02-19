@@ -39,8 +39,8 @@ RUN echo "memory_limit = 512M" > /usr/local/etc/php/conf.d/memory-limit.ini \
     && echo "max_execution_time = 300" > /usr/local/etc/php/conf.d/execution-time.ini
 
 # ============= 第2层：Composer依赖（仅composer.json变化时重建）=============
-COPY composer.json /var/www/html/
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts 2>/dev/null || true
+COPY composer.json composer.lock /var/www/html/
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 # ============= 第3层：应用代码（频繁变化）=============
 COPY . /var/www/html

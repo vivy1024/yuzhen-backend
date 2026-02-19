@@ -75,7 +75,7 @@ storage/framework/views/*
 
 # Composer
 composer.phar
-composer.lock
+# 注意：composer.lock 必须包含，确保构建时依赖版本一致
 
 # NPM
 package-lock.json
