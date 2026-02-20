@@ -7,6 +7,7 @@ use App\Modules\Admin\Controllers\AdminUserController;
 use App\Modules\Admin\Controllers\AdminFeedbackController;
 use App\Modules\Admin\Controllers\MetricsProxyController;
 use App\Modules\Admin\Controllers\UserCreditsController;
+use App\Modules\Admin\Controllers\AdminKpiController;
 use App\Http\Controllers\Admin\DataMigrationController;
 
 /**
@@ -145,6 +146,14 @@ Route::prefix('admin')->middleware(['jwt.auth', 'admin'])->group(function () {
         Route::get('/prometheus/raw', [MetricsProxyController::class, 'prometheusRaw']);
     });
     
+    // ========== 运营 KPI ==========
+    Route::prefix('kpi')->group(function () {
+        Route::get('/overview', [AdminKpiController::class, 'overview']);
+        Route::get('/growth', [AdminKpiController::class, 'growth']);
+        Route::get('/activity', [AdminKpiController::class, 'activity']);
+        Route::get('/retention', [AdminKpiController::class, 'retention']);
+    });
+
     // ========== 数据迁移（临时） ==========
     Route::prefix('migrate')->group(function () {
         // 肌肉字段迁移预览
