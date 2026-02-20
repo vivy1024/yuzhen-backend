@@ -14,41 +14,45 @@ use App\Http\Controllers\MCPToolsController;
  * @created 2025-11-03
  */
 
-// 通用MCP工具调用
-Route::post('/tools/execute', [MCPToolsController::class, 'executeGeneric']);
+// MCP工具路由 - 需要用户认证 + 内部JWT转发
+Route::middleware(['jwt.auth', 'internal.jwt.forward'])->group(function () {
 
-// MCP专用工具API
-Route::prefix('mcp/tools')->group(function () {
+    // 通用MCP工具调用
+    Route::post('/tools/execute', [MCPToolsController::class, 'executeGeneric']);
 
-    // AI生成个性化训练计划
-    Route::post('/design-personalized-program-v2', [MCPToolsController::class, 'designPersonalizedProgram']);
+    // MCP专用工具API
+    Route::prefix('mcp/tools')->group(function () {
 
-    // AI计算训练重量推荐
-    Route::post('/calculate-training-weights', [MCPToolsController::class, 'calculateTrainingWeights']);
+        // AI生成个性化训练计划
+        Route::post('/design-personalized-program-v2', [MCPToolsController::class, 'designPersonalizedProgram']);
 
-    // 推荐RPE范围
-    Route::post('/recommend-rpe-range', [MCPToolsController::class, 'recommendRPERange']);
+        // AI计算训练重量推荐
+        Route::post('/calculate-training-weights', [MCPToolsController::class, 'calculateTrainingWeights']);
 
-    // 搜索动作
-    Route::post('/search-exercises', [MCPToolsController::class, 'searchExercises']);
+        // 推荐RPE范围
+        Route::post('/recommend-rpe-range', [MCPToolsController::class, 'recommendRPERange']);
 
-    // 获取训练计划模板
-    Route::get('/get-training-program-template', function () {
-        // TODO: 实现模板系统
-        return response()->json([
-            'code' => 200,
-            'msg' => '功能开发中',
-            'data' => null,
-        ]);
-    });
+        // 搜索动作
+        Route::post('/search-exercises', [MCPToolsController::class, 'searchExercises']);
 
-    // 列出所有模板
-    Route::get('/training-program-templates', function () {
-        // TODO: 实现模板列表
-        return response()->json([
-            'code' => 200,
-            'msg' => '功能开发中',
-            'data' => [],
-        ]);
+        // 获取训练计划模板
+        Route::get('/get-training-program-template', function () {
+            // TODO: 实现模板系统
+            return response()->json([
+                'code' => 200,
+                'msg' => '功能开发中',
+                'data' => null,
+            ]);
+        });
+
+        // 列出所有模板
+        Route::get('/training-program-templates', function () {
+            // TODO: 实现模板列表
+            return response()->json([
+                'code' => 200,
+                'msg' => '功能开发中',
+                'data' => [],
+            ]);
+        });
     });
 });
