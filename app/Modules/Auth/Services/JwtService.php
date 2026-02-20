@@ -25,7 +25,10 @@ class JwtService
     
     public function __construct()
     {
-        $this->secret = config('auth.jwt_secret', env('JWT_SECRET', 'your-secret-key'));
+        $this->secret = config('auth.jwt_secret') ?: env('JWT_SECRET', '');
+        if (empty($this->secret)) {
+            throw new \RuntimeException('JWT_SECRET未配置，拒绝启动。请在.env中设置JWT_SECRET');
+        }
         $this->ttl = config('auth.jwt_ttl', 3600); // 1小时
         $this->refreshTtl = config('auth.jwt_refresh_ttl', 604800); // 7天
     }

@@ -1,7 +1,7 @@
 # 玉珍健身后端（Laravel） CHANGELOG
 
-**版本**: v2.122.0
-**更新日期**: 2026-02-20
+**版本**: v2.127.0
+**更新日期**: 2026-02-21
 **项目状态**: ✅ 生产运行
 
 ---
@@ -16,6 +16,44 @@
 ---
 
 ## 版本历史
+
+### v2.127.0 (2026-02-21) - 安全加固：JWT密钥防护+Nginx信息泄露修复
+
+**变更类型**: 🔒 安全
+
+**变更内容**:
+- **修复** `JwtService.php` 移除硬编码fallback `'your-secret-key'`，JWT_SECRET未配置时抛RuntimeException而非静默降级
+- **修复** `docker/nginx/default.conf` 添加`server_tokens off`隐藏Nginx版本号，`fastcgi_hide_header X-Powered-By`隐藏PHP版本
+- **修复** `docker/nginx/default.conf` fastcgi_pass改为`php_v2:9000`与Docker网络一致
+
+**修改文件**: 2个
+
+---
+
+### v2.126.0 (2026-02-21) - MCPToolsController认证加固
+
+**变更类型**: 🔒 安全
+
+**变更内容**:
+- **修复** `routes/modules/mcp-tools.php` 所有MCP路由添加`jwt.auth`+`internal.jwt.forward`中间件
+- **新增** `MCPToolsController.php` `forwardRequest()`私有方法，统一转发Authorization+X-Internal-Token认证头
+- **修改** `executeGeneric()`/`designPersonalizedProgram()`/`calculateTrainingWeights()`/`recommendRPERange()` 使用`forwardRequest()`
+
+**修改文件**: 2个
+
+---
+
+### v2.125.0 (2026-02-21) - warmup预热接口401修复
+
+**变更类型**: 🐛 修复
+
+**变更内容**:
+- **修复** `routes/modules/admin.php` warmup路由添加`internal.jwt.forward`中间件
+- **修复** `AiProxyController.php` warmup方法转发认证头到DAML-RAG
+
+**修改文件**: 2个
+
+---
 
 ### v2.122.0 (2026-02-20) - 代码库清理：删除废弃命令
 
