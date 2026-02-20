@@ -207,8 +207,20 @@ class AiProxyController extends BaseController
         $data = $request->all();
 
         try {
-            $response = Http::timeout(10)
-                ->post("{$this->damlRagUrl}/api/v1/user/warmup", $data);
+            $httpRequest = Http::timeout(10);
+
+            if ($request->hasHeader('Authorization')) {
+                $httpRequest = $httpRequest->withHeaders([
+                    'Authorization' => $request->header('Authorization'),
+                ]);
+            }
+            if ($request->hasHeader('X-Internal-Token')) {
+                $httpRequest = $httpRequest->withHeaders([
+                    'X-Internal-Token' => $request->header('X-Internal-Token'),
+                ]);
+            }
+
+            $response = $httpRequest->post("{$this->damlRagUrl}/api/v1/user/warmup", $data);
 
             if ($response->successful()) {
                 return response()->json($response->json());
@@ -227,11 +239,23 @@ class AiProxyController extends BaseController
      * @param string $userId
      * @return \Illuminate\Http\JsonResponse
      */
-    public function warmupStatus(string $userId)
+    public function warmupStatus(Request $request, string $userId)
     {
         try {
-            $response = Http::timeout(10)
-                ->get("{$this->damlRagUrl}/api/v1/user/warmup/status/{$userId}");
+            $httpRequest = Http::timeout(10);
+
+            if ($request->hasHeader('Authorization')) {
+                $httpRequest = $httpRequest->withHeaders([
+                    'Authorization' => $request->header('Authorization'),
+                ]);
+            }
+            if ($request->hasHeader('X-Internal-Token')) {
+                $httpRequest = $httpRequest->withHeaders([
+                    'X-Internal-Token' => $request->header('X-Internal-Token'),
+                ]);
+            }
+
+            $response = $httpRequest->get("{$this->damlRagUrl}/api/v1/user/warmup/status/{$userId}");
 
             if ($response->successful()) {
                 return response()->json($response->json());
