@@ -4,9 +4,9 @@
 [![Laravel](https://img.shields.io/badge/Laravel-10.x-red)](https://laravel.com/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-**版本**: 2.0.0  
-**架构**: 微服务化单体（Modular Monolith）  
-**更新**: 2025-11-01
+**版本**: v2.122.0
+**架构**: 微服务化单体（Modular Monolith）
+**更新**: 2026-02-20
 
 ---
 
@@ -16,26 +16,27 @@ Yuzhen Backend是一个采用**微服务化架构**设计的健身APP后端系�
 
 ### 核心特性
 
-- ✅ **微服务化模块设计** - 每个功能模块独立，易于维护和扩展
-- ✅ **三层架构** - Modules（业务）→ Infrastructure（基础设施）→ Shared（共享）
+- ✅ **微服务化模块设计** - 8个独立业务模块，高内聚低耦合
 - ✅ **统一API响应格式** - `{code, msg, data}` 标准响应
-- ✅ **分层清晰** - Controller → Service → Repository → Model
-- ✅ **依赖注入** - 基于接口编程，易于测试和扩展
-- ✅ **缓存策略** - 自动缓存管理，提升性能
-- ✅ **事件驱动** - 模块间通过事件解耦
+- ✅ **双重认证** - JWT用户认证 + Internal JWT（DAML-RAG服务间认证）
+- ✅ **安全加固** - CORS配置、安全响应头、审计日志、凭证清理
+- ✅ **缓存策略** - Redis自动缓存管理
+- ✅ **Docker部署** - fitness_php_v2 + fitness_nginx_v2 容器
 
 ---
 
-## 📦 模块列表
+## 📦 核心模块
 
 | 模块 | 状态 | 说明 |
 |-----|------|-----|
-| Exercise | ✅ 已完成 | 动作库模块（1603个动作） |
-| User | 🚧 待实现 | 用户模块 |
-| Auth | 🚧 待实现 | 认证模块（JWT） |
-| Training | 🚧 待实现 | 训练模块 |
-| Membership | 🚧 待实现 | 会员模块 |
-| Admin | 🚧 待实现 | 管理模块 |
+| Exercise | ✅ 已完成 | 动作库模块（1,790个动作） |
+| Food | ✅ 已完成 | 食物库模块（1,880个食物） |
+| User | ✅ 已完成 | 用户模块（注册/登录/档案） |
+| Auth | ✅ 已完成 | 认证模块（JWT + Internal JWT） |
+| Training | ✅ 已完成 | 训练模块（计划/记录/执行） |
+| Membership | ✅ 已完成 | 会员模块（三级会员体系） |
+| AI Chat | ✅ 已完成 | AI聊天模块（DAML-RAG集成） |
+| Admin | ✅ 已完成 | 管理模块（用户/数据管理） |
 
 ---
 
@@ -233,65 +234,34 @@ php artisan test
 
 - **框架**: Laravel 10.x
 - **PHP**: 8.2+
-- **数据库**: MySQL 8.0
-- **缓存**: Redis
-- **队列**: Redis Queue
-- **文档**: OpenAPI 3.0
+- **数据库**: MySQL 8.0 + Redis 7.0
+- **容器**: Docker（fitness_php_v2 + fitness_nginx_v2）
+- **端口**: 8000（Nginx）
+- **AI服务**: DAML-RAG（Internal JWT认证）
 
 ---
 
 ## 📖 相关文档
 
-- [项目结构规划.md](./项目结构规划.md) - 完整架构设计
-- [微服务化架构说明.md](./微服务化架构说明.md) - 架构详解
-- [快速启动指南.md](./快速启动指南.md) - 开发指南
-- [模块化重构完成总结.md](./模块化重构完成总结.md) - 重构总结
+- [CHANGELOG.md](./CHANGELOG.md) - 版本历史（当前 v2.122.0）
+- [docs/01-快速开始/](./docs/01-快速开始/) - 快速启动指南
+- [docs/02-核心架构/](./docs/02-核心架构/) - 架构设计文档
+- [docs/03-代码参考/](./docs/03-代码参考/) - 代码实现参考
+- [docs/04-开发指南/](./docs/04-开发指南/) - 开发指南
+- [docs/05-API文档/](./docs/05-API文档/) - API接口文档
 
 ---
 
-## 🎯 未来规划
+## 近期变更（2025-12 ~ 2026-02）
 
-### Phase 1: 单体模块化（当前）✅
-- ✅ 模块化目录结构
-- ✅ Exercise模块完整实现
-- 🚧 User、Auth、Training模块实现
-
-### Phase 2: 服务分离
-- 拆分为多个Laravel应用
-- 独立部署
-- 服务间HTTP通信
-
-### Phase 3: 真正的微服务
-- 独立数据库
-- 服务注册与发现
-- API网关
-- Docker + Kubernetes
+- 安全加固：凭证清理、API认证、CORS配置、安全响应头、审计日志
+- 权限系统重构：Internal JWT验证 + fail-closed双认证
+- API响应规范合规性修复（高优先级控制器）
+- 错误消息用户友好性优化
+- 帮助中心FAQ系统、用户反馈系统
+- 训练反馈记录API
+- 代码库清理：删除废弃命令
 
 ---
 
-## 🤝 贡献
-
-欢迎贡献代码！请遵循以下步骤：
-
-1. Fork本项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建Pull Request
-
----
-
-## 📄 License
-
-MIT License
-
----
-
-## 📧 联系方式
-
-- **项目主页**: GitHub Repository
-- **问题反馈**: GitHub Issues
-
----
-
-**🎉 Happy Coding!**
+**开发者**: 薛小川 · **版本**: v2.122.0 · **更新**: 2026-02-20
