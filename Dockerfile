@@ -49,7 +49,9 @@ COPY . /var/www/html
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # ============= 第4层：配置文件（很少变化）=============
-COPY docker/nginx/default.conf /etc/nginx/sites-available/default
+# Zeabur单容器模式：用根目录nginx.conf（127.0.0.1:9000 + 端口8080）
+# 注意：docker/nginx/default.conf 是本地多容器模式用的（php_v2:9000 + 端口80）
+COPY nginx.conf /etc/nginx/sites-available/default
 RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default \
     && rm -f /etc/nginx/sites-enabled/default.bak
 
