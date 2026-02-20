@@ -37,6 +37,29 @@ class MCPToolsController extends BaseController
     }
 
     /**
+     * 转发请求到MCO服务器（携带认证头）
+     *
+     * 复用AiProxyController的认证头转发模式
+     */
+    private function forwardRequest(Request $request, string $url, array $data, int $timeout = null): \Illuminate\Http\Client\Response
+    {
+        $httpRequest = Http::timeout(($timeout ?? $this->timeout) / 1000);
+
+        if ($request->hasHeader('Authorization')) {
+            $httpRequest = $httpRequest->withHeaders([
+                'Authorization' => $request->header('Authorization'),
+            ]);
+        }
+        if ($request->hasHeader('X-Internal-Token')) {
+            $httpRequest = $httpRequest->withHeaders([
+                'X-Internal-Token' => $request->header('X-Internal-Token'),
+            ]);
+        }
+
+        return $httpRequest->post($url, $data);
+    }
+
+    /**
      * 通用MCP工具调用
      *
      * POST /api/tools/execute
@@ -68,13 +91,12 @@ class MCPToolsController extends BaseController
                 'args' => $args,
             ]);
 
-            // 转发到MCO服务器
-            $response = Http::timeout($this->timeout / 1000)
-                ->post("{$this->mcoBaseUrl}/tools/execute", [
-                    'server' => $server,
-                    'method' => $method,
-                    'args' => $args,
-                ]);
+            // 转发到MCO服务器（携带认证头）
+            $response = $this->forwardRequest($request, "{$this->mcoBaseUrl}/tools/execute", [
+                'server' => $server,
+                'method' => $method,
+                'args' => $args,
+            ]);
 
             if ($response->successful()) {
                 return $this->success($response->json());
@@ -115,16 +137,15 @@ class MCPToolsController extends BaseController
 
             Log::info("AI生成训练计划", ['params' => $params]);
 
-            // 调用MCO服务器的聊天接口
-            $response = Http::timeout($this->timeout / 1000)
-                ->post("{$this->mcoBaseUrl}/chat", [
-                    'message' => $this->buildProgramPrompt($params),
-                    'user_id' => auth()->id() ?? 'guest',
-                    'context' => [
-                        'tool' => 'design-personalized-program-v2',
-                        'params' => $params,
-                    ],
-                ]);
+            // 调用MCO服务器的聊天接口（携带认证头）
+            $response = $this->forwardRequest($request, "{$this->mcoBaseUrl}/chat", [
+                'message' => $this->buildProgramPrompt($params),
+                'user_id' => auth()->id() ?? 'guest',
+                'context' => [
+                    'tool' => 'design-personalized-program-v2',
+                    'params' => $params,
+                ],
+            ]);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -157,12 +178,11 @@ class MCPToolsController extends BaseController
         try {
             $params = $request->all();
 
-            $response = Http::timeout(5)
-                ->post("{$this->mcoBaseUrl}/chat", [
-                    'message' => $this->buildWeightCalculationPrompt($params),
-                    'user_id' => $params['user_id'] ?? auth()->id(),
-                    'context' => ['tool' => 'calculate-training-weights'],
-                ]);
+            $response = $this->forwardRequest($request, "{$this->mcoBaseUrl}/chat", [
+                'message' => $this->buildWeightCalculationPrompt($params),
+                'user_id' => $params['user_id'] ?? auth()->id(),
+                'context' => ['tool' => 'calculate-training-weights'],
+            ], 5000);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -190,12 +210,11 @@ class MCPToolsController extends BaseController
         try {
             $params = $request->all();
 
-            $response = Http::timeout(5)
-                ->post("{$this->mcoBaseUrl}/chat", [
-                    'message' => $this->buildRPEPrompt($params),
-                    'user_id' => $params['user_id'] ?? auth()->id(),
-                    'context' => ['tool' => 'recommend-rpe-range'],
-                ]);
+            $response = $this->forwardRequest($request, "{$this->mcoBaseUrl}/chat", [
+                'message' => $this->buildRPEPrompt($params),
+                'user_id' => $params['user_id'] ?? auth()->id(),
+                'context' => ['tool' => 'recommend-rpe-range'],
+            ], 5000);
 
             if ($response->successful()) {
                 $data = $response->json();
