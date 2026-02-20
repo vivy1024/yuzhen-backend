@@ -123,8 +123,8 @@ Route::prefix('ai')->group(function () {
         Route::post('/v1/chat', [\App\Http\Controllers\AiProxyController::class, 'chat']);
     });
     
-    // 用户预热接口（需要JWT认证，不需要配额检查）
-    Route::middleware(['jwt.auth'])->group(function () {
+    // 用户预热接口（需要JWT认证 + Internal JWT转发，不需要配额检查）
+    Route::middleware(['jwt.auth', 'internal.jwt.forward'])->group(function () {
         Route::post('/v1/user/warmup', [\App\Http\Controllers\AiProxyController::class, 'warmup']);
         Route::get('/v1/user/warmup/status/{userId}', [\App\Http\Controllers\AiProxyController::class, 'warmupStatus']);
     });
