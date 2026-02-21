@@ -5,6 +5,16 @@
 
 ---
 
+## #3 (feat) 知识库 API + FormRequest 安全加固 — 2026-02-21
+
+- 新增 KnowledgeController：5 个 API 端点（列表/详情/分类树/卡片/搜索）
+- 新增 KnowledgeSearchRequest FormRequest 验证
+- 新增 ChatTopicRequest / ChatHistoryRequest / SyncMessagesRequest FormRequest 类
+- ChatTopicController 5 个方法从内联 validate 迁移到 FormRequest 类型注入
+- 移除 update() 中冗余的 ValidationException catch（FormRequest 自动处理）
+- 新增 `routes/modules/knowledge.php` 路由模块
+- 对应产品版本：v1.0.0
+
 ## #2 (feat) 专业知识库数据模型 — 2026-02-21
 
 - 新增 `knowledge_categories` 表 + Seeder（3 顶级分类 × 5 子分类 = 18 条）

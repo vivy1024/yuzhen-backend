@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Infrastructure\Http\Controllers\BaseController;
+use App\Http\Requests\AiChatRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -35,9 +36,9 @@ class AiProxyController extends BaseController
      * @param Request $request
      * @return StreamedResponse
      */
-    public function streamChat(Request $request): StreamedResponse
+    public function streamChat(AiChatRequest $request): StreamedResponse
     {
-        $data = $request->all();
+        $data = $request->validated();
         
         Log::info('[AiProxy] 流式聊天请求', [
             'user_id' => $data['user_id'] ?? null,
@@ -132,9 +133,9 @@ class AiProxyController extends BaseController
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function chat(Request $request)
+    public function chat(AiChatRequest $request)
     {
-        $data = $request->all();
+        $data = $request->validated();
         
         Log::info('[AiProxy] 非流式聊天请求', [
             'user_id' => $data['user_id'] ?? null,

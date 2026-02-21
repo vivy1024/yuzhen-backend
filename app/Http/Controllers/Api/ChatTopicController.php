@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Infrastructure\Http\Controllers\BaseController;
+use App\Http\Requests\ChatTopicRequest;
+use App\Http\Requests\ChatHistoryRequest;
+use App\Http\Requests\SyncMessagesRequest;
 use App\Models\ChatTopic;
 use App\Models\ChatSession;
 use App\Models\ChatMessage;
@@ -34,14 +37,14 @@ class ChatTopicController extends BaseController
      * @param Request $request
      * @return JsonResponse
      */
-    public function history(Request $request): JsonResponse
+    public function history(ChatHistoryRequest $request): JsonResponse
     {
         try {
             $user = $request->user();
-            $topicId = $request->get('topic_id');
-            $limit = min($request->get('limit', 20), 100);
-            $offset = $request->get('offset', 0);
-            $sessionId = $request->get('session_id');
+            $topicId = $request->validated('topic_id');
+            $limit = min($request->validated('limit', 20), 100);
+            $offset = $request->validated('offset', 0);
+            $sessionId = $request->validated('session_id');
             
             // 构建查询
             $query = ChatSession::where('user_id', $user->id)
@@ -103,12 +106,12 @@ class ChatTopicController extends BaseController
      * @param Request $request
      * @return JsonResponse
      */
-    public function sessions(Request $request): JsonResponse
+    public function sessions(ChatHistoryRequest $request): JsonResponse
     {
         try {
             $user = $request->user();
-            $limit = min($request->get('limit', 20), 100);
-            $offset = $request->get('offset', 0);
+            $limit = min($request->validated('limit', 20), 100);
+            $offset = $request->validated('offset', 0);
             
             // 按session_id分组，获取每个会话的最新记录
             $sessionsQuery = ChatSession::where('user_id', $user->id)
@@ -317,12 +320,10 @@ class ChatTopicController extends BaseController
      * 创建新话题
      * POST /api/chat/topics
      */
-    public function store(Request $request): JsonResponse
+    public function store(ChatTopicRequest $request): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'name' => 'required|string|max:100',
-            ]);
+            $validated = $request->validated();
             
             $user = $request->user();
             
@@ -393,13 +394,10 @@ class ChatTopicController extends BaseController
      * 更新话题
      * PUT /api/chat/topics/{id}
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(ChatTopicRequest $request, int $id): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'name' => 'sometimes|required|string|max:100',
-                'description' => 'nullable|string',
-            ]);
+            $validated = $request->validated();
             
             $user = $request->user();
             
@@ -425,9 +423,6 @@ class ChatTopicController extends BaseController
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->fail('话题不存在', 404);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return $this->fail('参数验证失败', 422, $e->errors()
-            );
         } catch (\Exception $e) {
             Log::error('更新话题失败', [
                 'error' => $e->getMessage(),
@@ -603,17 +598,10 @@ class ChatTopicController extends BaseController
      * 批量同步消息（从本地缓存同步到后端）
      * POST /api/chat/topics/{id}/messages/sync
      */
-    public function syncMessages(Request $request, int $id): JsonResponse
+    public function syncMessages(SyncMessagesRequest $request, int $id): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'messages' => 'required|array',
-                'messages.*.role' => 'required|in:user,assistant,system',
-                'messages.*.content' => 'required|string',
-                'messages.*.client_id' => 'required|string|max:64',
-                'messages.*.timestamp' => 'nullable|integer',
-                'messages.*.metadata' => 'nullable|array',
-            ]);
+            $validated = $request->validated();
             
             $user = $request->user();
             

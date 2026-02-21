@@ -104,6 +104,9 @@ require __DIR__.'/modules/feedback.php';
 // Help模块（帮助中心）✅
 require __DIR__.'/modules/help.php';
 
+// Knowledge模块（知识库）✅
+require __DIR__.'/modules/knowledge.php';
+
 // AI代理模块已移至 routes/web.php（无/api前缀）
 // require __DIR__.'/modules/ai-proxy.php';
 
