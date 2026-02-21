@@ -208,16 +208,21 @@ class UsageTrackingService
                 'reason' => $reason
             ];
             
+            // 安全修复：使用 increment() 替代 DB::raw 变量插值
             DB::table('user_bonus_credits')
-                ->updateOrInsert(
-                    ['user_id' => $userId],
-                    [
-                        'total_dag_credits' => DB::raw("total_dag_credits + {$dagCredits}"),
-                        'total_agent_credits' => DB::raw("total_agent_credits + {$agentCredits}"),
-                        'donation_history' => json_encode($history),
-                        'updated_at' => Carbon::now()
-                    ]
-                );
+                ->where('user_id', $userId)
+                ->increment('total_dag_credits', $dagCredits);
+
+            DB::table('user_bonus_credits')
+                ->where('user_id', $userId)
+                ->increment('total_agent_credits', $agentCredits);
+
+            DB::table('user_bonus_credits')
+                ->where('user_id', $userId)
+                ->update([
+                    'donation_history' => json_encode($history),
+                    'updated_at' => Carbon::now()
+                ]);
             
             // 清除缓存
             $this->clearCache($userId);

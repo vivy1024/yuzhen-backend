@@ -209,7 +209,11 @@ class ExerciseRepository extends BaseRepository implements ExerciseRepositoryInt
             'force_type' => 'force_en',
         ];
         
-        $dbColumn = $columnMap[$column] ?? $column;
+        // 安全修复：白名单验证，防止任意列名注入
+        if (!isset($columnMap[$column])) {
+            return [];
+        }
+        $dbColumn = $columnMap[$column];
         
         // 如果是数组字段（muscles_primary_zh），需要特殊处理
         if ($dbColumn === 'muscles_primary_zh') {
