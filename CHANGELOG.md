@@ -13,7 +13,7 @@
 - ChatTopicController 5 个方法从内联 validate 迁移到 FormRequest 类型注入
 - 移除 update() 中冗余的 ValidationException catch（FormRequest 自动处理）
 - 新增 `routes/modules/knowledge.php` 路由模块
-- 对应产品版本：v1.0.0
+- 对应产品版本：v1.1.0
 
 ## #2 (feat) 专业知识库数据模型 — 2026-02-21
 
@@ -22,7 +22,7 @@
 - 新增 `knowledge_references` 表（书籍/论文/指南引用）
 - 3 个 Eloquent Model：KnowledgeArticle / KnowledgeCategory / KnowledgeReference
 - Docker 容器内迁移验证通过
-- 对应产品版本：v1.0.0
+- 对应产品版本：v1.1.0
 
 ## #1 (chore) MVP 基线 — 2026-02-21
 
