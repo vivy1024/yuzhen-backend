@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Infrastructure\Http\Controllers\BaseController;
+use App\Http\Requests\ComplaintIndexRequest;
 use App\Models\Complaint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -66,9 +67,9 @@ class ComplaintController extends BaseController
      * 
      * GET /api/v2/complaints
      */
-    public function index(Request $request): JsonResponse
+    public function index(ComplaintIndexRequest $request): JsonResponse
     {
-        $perPage = $request->input('per_page', 10);
+        $perPage = $request->integer('per_page', 10);
         $status = $request->input('status');
 
         $query = Complaint::where('user_id', Auth::id())
