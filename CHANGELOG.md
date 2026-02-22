@@ -5,6 +5,18 @@
 
 ---
 
+## #8 (fix) Docker验证批次 — 迁移+测试修复 — 2026-02-22
+
+- 运行6个Pending迁移：permission_tables标记已执行 + credit_transactions唯一索引 + 4个user-custom-plans迁移
+- 修复 `TrainingPlanExercise` Exercise模型引用：`App\Models\Exercise` → `App\Modules\Exercise\Models\Exercise`
+- 修复 `CreditServiceTest` / `InternalChatControllerTest` 中间件引用：`InternalApiMiddleware` → `InternalApiAuth`
+- 修复 `InternalChatControllerTest` save_topic/save_message 数据类型：user_id 转字符串 + 使用真实topic_id
+- PlanTemplateSeeder 验证：12个官方模板全部入库
+- PHPUnit 全量验证：71用例/252断言全通过（UserPlan 8 + CreditUnit 45 + CreditFeature 5 + InternalChat 6 + AdminKpi 5 + Prometheus 2）
+- 对应产品版本：v1.1.0（内部测试修复，产品版本不动）
+
+---
+
 ## #7 (feat) 连续训练统计 + 成就徽章 — 2026-02-22
 
 - 新增迁移：user_profiles 添加 streak_days / total_training_days / last_training_date 字段

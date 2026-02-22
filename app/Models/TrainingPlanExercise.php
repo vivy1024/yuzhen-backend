@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Modules\Exercise\Models\Exercise;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 

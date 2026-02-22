@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use Tests\TestCase;
 use App\Modules\User\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Http\Middleware\InternalApiMiddleware;
+use App\Infrastructure\Http\Middleware\InternalApiAuth;
 
 /**
  * Internal Chat API Feature 测试
@@ -22,7 +22,7 @@ class InternalChatControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->withoutMiddleware([InternalApiMiddleware::class]);
+        $this->withoutMiddleware([InternalApiAuth::class]);
     }
 
     protected function createUser(): User
@@ -81,7 +81,7 @@ class InternalChatControllerTest extends TestCase
         $user = $this->createUser();
 
         $response = $this->postJson('/api/internal/chat/save-topic', [
-            'user_id' => $user->id,
+            'user_id' => (string) $user->id,
             'topic_id' => 'topic_test_001',
             'name' => '胸肌训练讨论',
         ]);
@@ -97,15 +97,17 @@ class InternalChatControllerTest extends TestCase
     {
         $user = $this->createUser();
 
-        // 先创建话题
-        $this->postJson('/api/internal/chat/save-topic', [
-            'user_id' => $user->id,
+        // 先通过 API 创建话题，获取真实 topic ID
+        $topicResponse = $this->postJson('/api/internal/chat/save-topic', [
+            'user_id' => (string) $user->id,
             'topic_id' => 'topic_msg_001',
             'name' => '测试话题',
         ]);
+        $topicId = $topicResponse->json('data.topic_id');
 
         $response = $this->postJson('/api/internal/chat/save-message', [
-            'topic_id' => 'topic_msg_001',
+            'topic_id' => (string) $topicId,
+            'user_id' => (string) $user->id,
             'role' => 'user',
             'content' => '我想练胸肌',
         ]);

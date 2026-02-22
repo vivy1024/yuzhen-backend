@@ -6,7 +6,7 @@ use Tests\TestCase;
 use App\Modules\User\Models\User;
 use App\Models\CreditTransaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Http\Middleware\InternalApiMiddleware;
+use App\Infrastructure\Http\Middleware\InternalApiAuth;
 
 /**
  * 积分服务 Feature 测试
@@ -23,7 +23,7 @@ class CreditServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->withoutMiddleware([InternalApiMiddleware::class]);
+        $this->withoutMiddleware([InternalApiAuth::class]);
     }
 
     protected function createUser(array $overrides = []): User
