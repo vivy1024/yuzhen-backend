@@ -48,6 +48,12 @@ class UserProfileResource extends JsonResource
             // FFMI评估结果（可选）
             'ffmi_assessment' => $profile->ffmi_assessment ?? null,
 
+            // 训练连续天数与成就
+            'streak_days' => $profile->streak_days ?? 0,
+            'total_training_days' => $profile->total_training_days ?? 0,
+            'last_training_date' => $profile->last_training_date?->toDateString(),
+            'achievements' => $profile->getAchievements(),
+
             // 创建时间 ISO 8601
             'created_at' => $profile->created_at?->toISOString(),
 

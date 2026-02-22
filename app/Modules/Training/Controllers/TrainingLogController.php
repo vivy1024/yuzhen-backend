@@ -5,6 +5,7 @@ namespace App\Modules\Training\Controllers;
 use App\Infrastructure\Http\Controllers\BaseController;
 use App\Models\TrainingLog;
 use App\Models\PersonalBest;
+use App\Modules\User\Models\UserProfile;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -181,6 +182,9 @@ class TrainingLogController extends BaseController
                 if ($log->training_plan_id) {
                     $this->updatePlanProgress($log->training_plan_id);
                 }
+
+                // 更新连续训练天数
+                $this->updateTrainingStreak($user->id, $data['session_date']);
 
                 DB::commit();
 
@@ -528,6 +532,24 @@ class TrainingLogController extends BaseController
         } catch (\Exception $e) {
             \Log::error('更新训练计划进度失败', [
                 'plan_id' => $planId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * 更新用户连续训练天数
+     */
+    private function updateTrainingStreak(int $userId, string $sessionDate): void
+    {
+        try {
+            $profile = UserProfile::where('user_id', $userId)->first();
+            if ($profile) {
+                $profile->updateTrainingStreak($sessionDate);
+            }
+        } catch (\Exception $e) {
+            \Log::error('更新训练连续天数失败', [
+                'user_id' => $userId,
                 'error' => $e->getMessage(),
             ]);
         }
