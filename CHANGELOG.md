@@ -5,6 +5,27 @@
 
 ---
 
+## #10 (feat) Web Push 推送通知系统 — 2026-02-22
+
+- 安装 `minishlink/web-push` v10 PHP 库
+- 创建 `push_subscriptions` 迁移（endpoint/p256dh/auth/reminder_time/is_active）
+- 新增 `PushSubscription` Model
+- 新增 `PushController`：subscribe / unsubscribe / updateReminderTime 三个端点
+- 新增 `PushNotificationService`：sendToUser + sendTrainingReminders（按提醒时间匹配）
+- 生成 VAPID 密钥对，配置到 `.env` + `config/services.php`
+- PHPUnit `PushControllerTest` 5用例/12断言全通过
+- 对应产品版本：v1.1.0
+
+---
+
+## #9 (docs) 用户自建计划文档 — 2026-02-22
+
+- 新增 `docs/04-开发指南/07-用户自建计划设计.md`
+- 新增 `docs/05-API文档/08-用户自建计划API.md`
+- 对应产品版本：v1.1.0
+
+---
+
 ## #8 (fix) Docker验证批次 — 迁移+测试修复 — 2026-02-22
 
 - 运行6个Pending迁移：permission_tables标记已执行 + credit_transactions唯一索引 + 4个user-custom-plans迁移
