@@ -33,7 +33,6 @@ class FoodServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // 加载模块路由
-        $this->loadRoutesFrom(base_path('routes/modules/food.php'));
+        // 路由已在 routes/api.php 中通过 require 引入
     }
 }
