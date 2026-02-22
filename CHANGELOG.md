@@ -5,6 +5,17 @@
 
 ---
 
+## #7 (feat) 连续训练统计 + 成就徽章 — 2026-02-22
+
+- 新增迁移：user_profiles 添加 streak_days / total_training_days / last_training_date 字段
+- 更新 `UserProfile` Model：updateTrainingStreak() 连续天数计算 + getAchievements() 成就徽章
+- 更新 `TrainingLogController.recordSession()`：训练记录提交后自动更新连续天数
+- 更新 `UserProfileResource`：返回 streak_days / total_training_days / achievements 数据
+- 成就定义：连续7/30/100/365天 + 累计10/50/200/500天（8枚徽章）
+- 对应产品版本：v1.1.0
+
+---
+
 ## #6 (feat) 用户自建训练/饮食计划 + 模板库 — 2026-02-22
 
 - 扩展 `TrainingPlanController`：新增 `store`（手动创建）、`copy`（复制计划）方法

@@ -47,6 +47,9 @@ class UserProfile extends Model
         'strength_progress',
         'training_feedback',
         'ffmi_assessment',
+        'streak_days',
+        'total_training_days',
+        'last_training_date',
         'version',
         'last_sync_at',
         'sync_status',
@@ -71,6 +74,9 @@ class UserProfile extends Model
         'version' => 'integer',
         'is_mcp_temp' => 'boolean',
         'last_sync_at' => 'datetime',
+        'streak_days' => 'integer',
+        'total_training_days' => 'integer',
+        'last_training_date' => 'date',
     ];
 
     /**
@@ -79,6 +85,82 @@ class UserProfile extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * 更新训练连续天数（训练记录提交时调用）
+     */
+    public function updateTrainingStreak(string $trainingDate): void
+    {
+        $today = now()->toDateString();
+        $yesterday = now()->subDay()->toDateString();
+        $lastDate = $this->last_training_date?->toDateString();
+
+        // 同一天重复训练不重复计数
+        if ($lastDate === $trainingDate) {
+            return;
+        }
+
+        // 计算连续天数
+        if ($lastDate === $yesterday || $lastDate === $today) {
+            // 昨天或今天训练过 → 连续+1
+            $this->streak_days += 1;
+        } elseif ($lastDate === null) {
+            // 首次训练
+            $this->streak_days = 1;
+        } else {
+            // 中断了 → 重新开始
+            $this->streak_days = 1;
+        }
+
+        $this->total_training_days += 1;
+        $this->last_training_date = $trainingDate;
+        $this->save();
+    }
+
+    /**
+     * 获取成就徽章列表
+     */
+    public function getAchievements(): array
+    {
+        $badges = [];
+        $milestones = [
+            ['days' => 7, 'name' => '初露锋芒', 'icon' => '🔥', 'description' => '连续训练7天'],
+            ['days' => 30, 'name' => '坚持不懈', 'icon' => '💪', 'description' => '连续训练30天'],
+            ['days' => 100, 'name' => '百日铁人', 'icon' => '🏆', 'description' => '连续训练100天'],
+            ['days' => 365, 'name' => '年度传奇', 'icon' => '👑', 'description' => '连续训练365天'],
+        ];
+
+        foreach ($milestones as $milestone) {
+            $badges[] = [
+                'name' => $milestone['name'],
+                'icon' => $milestone['icon'],
+                'description' => $milestone['description'],
+                'requiredDays' => $milestone['days'],
+                'unlocked' => $this->streak_days >= $milestone['days'],
+            ];
+        }
+
+        // 累计训练天数成就
+        $totalMilestones = [
+            ['days' => 10, 'name' => '起步者', 'icon' => '🌱'],
+            ['days' => 50, 'name' => '训练达人', 'icon' => '⭐'],
+            ['days' => 200, 'name' => '健身老手', 'icon' => '💎'],
+            ['days' => 500, 'name' => '铁血战士', 'icon' => '🎖️'],
+        ];
+
+        foreach ($totalMilestones as $milestone) {
+            $badges[] = [
+                'name' => $milestone['name'],
+                'icon' => $milestone['icon'],
+                'description' => "累计训练{$milestone['days']}天",
+                'requiredDays' => $milestone['days'],
+                'unlocked' => $this->total_training_days >= $milestone['days'],
+                'type' => 'total',
+            ];
+        }
+
+        return $badges;
     }
 
     /**
