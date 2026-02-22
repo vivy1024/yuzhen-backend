@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Infrastructure\Http\Controllers\BaseController;
 use App\Models\TrainingPlan;
+use App\Models\TrainingPlanExercise;
+use App\Models\UserNutritionPlan;
+use App\Http\Requests\UserPlanRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -20,6 +23,53 @@ use Illuminate\Support\Facades\DB;
  */
 class TrainingPlanController extends BaseController
 {
+    /**
+     * 手动创建训练计划（含动作列表）
+     * POST /api/training/plans
+     */
+    public function store(UserPlanRequest $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $validated = $request->validated();
+
+            DB::beginTransaction();
+            try {
+                $plan = TrainingPlan::create([
+                    'user_id' => $user->id,
+                    'name' => $validated['name'],
+                    'description' => $validated['description'] ?? null,
+                    'goal' => $validated['goal'] ?? null,
+                    'difficulty' => $validated['difficulty'] ?? null,
+                    'duration_weeks' => $validated['duration_weeks'],
+                    'workouts_per_week' => $validated['workouts_per_week'],
+                    'type' => 'manual',
+                    'is_active' => true,
+                ]);
+
+                $this->syncExercises($plan, $validated['exercises']);
+
+                if (!empty($validated['nutrition'])) {
+                    $this->syncNutrition($plan, $validated['nutrition']);
+                }
+
+                DB::commit();
+
+                return $this->success([
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'exerciseCount' => $plan->planExercises()->count(),
+                    'createdAt' => $plan->created_at->toIso8601String(),
+                ], '创建成功');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (\Exception $e) {
+            return $this->handleException($e, '创建训练计划');
+        }
+    }
+
     /**
      * 导入训练计划
      * POST /api/training/plans/import
@@ -113,8 +163,13 @@ class TrainingPlanController extends BaseController
                 $query->where('goal', $request->goal);
             }
             
-            $plans = $query->orderBy('created_at', 'desc')->get();
-            
+            // 按类型筛选
+            if ($request->has('type')) {
+                $query->where('type', $request->type);
+            }
+
+            $plans = $query->withCount('planExercises')->orderBy('created_at', 'desc')->get();
+
             return $this->success($plans->map(function ($plan) {
                 return [
                     'id' => $plan->id,
@@ -126,7 +181,7 @@ class TrainingPlanController extends BaseController
                     'goal' => $plan->goal,
                     'isActive' => $plan->is_active,
                     'type' => $plan->type,
-                    'exerciseCount' => is_array($plan->exercises) ? count($plan->exercises) : 0,
+                    'exerciseCount' => $plan->plan_exercises_count ?: (is_array($plan->exercises) ? count($plan->exercises) : 0),
                     'createdAt' => $plan->created_at->toIso8601String(),
                     'startedAt' => $plan->started_at?->toIso8601String(),
                     'completedAt' => $plan->completed_at?->toIso8601String(),
@@ -147,9 +202,9 @@ class TrainingPlanController extends BaseController
             $user = $request->user();
             
             $plan = TrainingPlan::where('user_id', $user->id)
-                ->with('chatSession')
+                ->with(['chatSession', 'planExercises.exercise', 'nutritionPlans.food'])
                 ->findOrFail($id);
-            
+
             return $this->success([
                 'id' => $plan->id,
                 'name' => $plan->name,
@@ -157,6 +212,33 @@ class TrainingPlanController extends BaseController
                 'weeks' => $plan->duration_weeks,
                 'frequency' => $plan->workouts_per_week,
                 'exercises' => $plan->exercises,
+                'planExercises' => $plan->planExercises->map(fn ($e) => [
+                    'id' => $e->id,
+                    'exerciseId' => $e->exercise_id,
+                    'exerciseName' => $e->exercise_name,
+                    'dayOfWeek' => $e->day_of_week,
+                    'sets' => $e->sets,
+                    'reps' => $e->reps,
+                    'weight' => $e->weight,
+                    'restTime' => $e->rest_time,
+                    'notes' => $e->notes,
+                    'orderIndex' => $e->order_index,
+                ]),
+                'nutritionPlans' => $plan->nutritionPlans->map(fn ($n) => [
+                    'id' => $n->id,
+                    'foodId' => $n->food_id,
+                    'foodName' => $n->food_name,
+                    'mealType' => $n->meal_type,
+                    'portionGrams' => $n->portion_grams,
+                    'dayOfWeek' => $n->day_of_week,
+                    'notes' => $n->notes,
+                    'nutrition' => $n->food ? [
+                        'energyKcal' => $n->food->energy_kcal,
+                        'protein' => $n->food->protein,
+                        'fat' => $n->food->fat,
+                        'carbohydrate' => $n->food->carbohydrate,
+                    ] : null,
+                ]),
                 'targetMuscles' => $plan->target_muscles,
                 'safetyNotes' => $plan->safety_notes,
                 'difficulty' => $plan->difficulty,
@@ -177,34 +259,39 @@ class TrainingPlanController extends BaseController
      * 更新训练计划
      * PUT /api/training/plans/{id}
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UserPlanRequest $request, int $id): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'name' => 'sometimes|required|string|max:100',
-                'description' => 'nullable|string',
-                'is_active' => 'sometimes|boolean',
-                'started_at' => 'nullable|date',
-                'completed_at' => 'nullable|date',
-            ]);
-            
             $user = $request->user();
-            
+            $validated = $request->validated();
+
             $plan = TrainingPlan::where('user_id', $user->id)
                 ->findOrFail($id);
-            
-            $plan->update($validated);
-            
-            Log::info('更新训练计划成功', [
-                'plan_id' => $plan->id,
-                'user_id' => $user->id,
-            ]);
-            
-            return $this->success([
-                'id' => $plan->id,
-                'name' => $plan->name,
-                'updatedAt' => $plan->updated_at->toIso8601String(),
-            ], '更新成功');
+
+            DB::beginTransaction();
+            try {
+                $plan->update(collect($validated)->except(['exercises', 'nutrition'])->toArray());
+
+                if (isset($validated['exercises'])) {
+                    $this->syncExercises($plan, $validated['exercises']);
+                }
+
+                if (isset($validated['nutrition'])) {
+                    $this->syncNutrition($plan, $validated['nutrition']);
+                }
+
+                DB::commit();
+
+                return $this->success([
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'exerciseCount' => $plan->planExercises()->count(),
+                    'updatedAt' => $plan->updated_at->toIso8601String(),
+                ], '更新成功');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
         } catch (\Exception $e) {
             return $this->handleException($e, '更新训练计划');
         }
@@ -232,6 +319,100 @@ class TrainingPlanController extends BaseController
             return $this->success(null, '删除成功');
         } catch (\Exception $e) {
             return $this->handleException($e, '删除训练计划');
+        }
+    }
+
+    /**
+     * 复制训练计划
+     * POST /api/training/plans/{id}/copy
+     */
+    public function copy(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            $original = TrainingPlan::where('user_id', $user->id)
+                ->with(['planExercises', 'nutritionPlans'])
+                ->findOrFail($id);
+
+            DB::beginTransaction();
+            try {
+                $newPlan = $original->replicate(['chat_session_id', 'started_at', 'completed_at', 'deleted_at']);
+                $newPlan->name = $original->name . ' (副本)';
+                $newPlan->type = 'manual';
+                $newPlan->is_active = false;
+                $newPlan->save();
+
+                foreach ($original->planExercises as $exercise) {
+                    $newExercise = $exercise->replicate();
+                    $newExercise->plan_id = $newPlan->id;
+                    $newExercise->save();
+                }
+
+                foreach ($original->nutritionPlans as $nutrition) {
+                    $newNutrition = $nutrition->replicate();
+                    $newNutrition->plan_id = $newPlan->id;
+                    $newNutrition->save();
+                }
+
+                DB::commit();
+
+                return $this->success([
+                    'id' => $newPlan->id,
+                    'name' => $newPlan->name,
+                    'exerciseCount' => $newPlan->planExercises()->count(),
+                    'createdAt' => $newPlan->created_at->toIso8601String(),
+                ], '复制成功');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (\Exception $e) {
+            return $this->handleException($e, '复制训练计划');
+        }
+    }
+
+    /**
+     * 同步计划动作列表（删除旧的，插入新的）
+     */
+    private function syncExercises(TrainingPlan $plan, array $exercises): void
+    {
+        $plan->planExercises()->delete();
+
+        foreach ($exercises as $index => $item) {
+            TrainingPlanExercise::create([
+                'plan_id' => $plan->id,
+                'exercise_id' => $item['exercise_id'] ?? null,
+                'exercise_name' => $item['exercise_name'],
+                'day_of_week' => $item['day_of_week'] ?? null,
+                'sets' => $item['sets'],
+                'reps' => $item['reps'],
+                'weight' => $item['weight'] ?? null,
+                'rest_time' => $item['rest_time'] ?? '60s',
+                'notes' => $item['notes'] ?? null,
+                'order_index' => $item['order_index'] ?? $index,
+            ]);
+        }
+    }
+
+    /**
+     * 同步饮食计划（删除旧的，插入新的）
+     */
+    private function syncNutrition(TrainingPlan $plan, array $items): void
+    {
+        $plan->nutritionPlans()->delete();
+
+        foreach ($items as $index => $item) {
+            UserNutritionPlan::create([
+                'plan_id' => $plan->id,
+                'food_id' => $item['food_id'] ?? null,
+                'food_name' => $item['food_name'],
+                'meal_type' => $item['meal_type'],
+                'portion_grams' => $item['portion_grams'] ?? 100,
+                'day_of_week' => $item['day_of_week'] ?? null,
+                'notes' => $item['notes'] ?? null,
+                'order_index' => $item['order_index'] ?? $index,
+            ]);
         }
     }
 }
