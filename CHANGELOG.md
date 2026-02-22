@@ -5,6 +5,21 @@
 
 ---
 
+## #6 (feat) 用户自建训练/饮食计划 + 模板库 — 2026-02-22
+
+- 扩展 `TrainingPlanController`：新增 `store`（手动创建）、`copy`（复制计划）方法
+- 更新 `update` 方法支持 exercises sync（删除旧的+插入新的）
+- 新增 `TrainingPlanExercise` Model + `day_of_week` 迁移（周视图排列）
+- 新增 `UserNutritionPlan` Model + 迁移（饮食计划，关联 foods 表营养数据）
+- 新增 `PlanTemplate` Model + 迁移 + `PlanTemplateSeeder`（12 个官方模板）
+- 新增 `PlanTemplateController`：模板列表 + 从模板创建个人计划
+- 新增 `UserPlanRequest` FormRequest（exercises + nutrition 嵌套验证）
+- 新增 `UserPlanControllerTest.php`（8 个用例）
+- 路由：`POST /plans`、`POST /plans/{id}/copy`、`GET /templates`、`POST /templates/{id}/use`
+- 对应产品版本：v1.1.0
+
+---
+
 ## #5 (feat) Prometheus /metrics 端点 + Feature 测试 — 2026-02-22
 
 - 新增 `PrometheusMetricsController`：`/metrics` 端点暴露 HTTP 请求计数、MySQL 连接数、PHP 内存、应用查询量

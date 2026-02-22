@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * TrainingPlan Model - 训练计划（扩展版）
@@ -98,6 +99,22 @@ class TrainingPlan extends Model
     {
         return $this->belongsTo(ChatSession::class);
     }
+
+    /**
+     * 关联：计划动作列表
+     */
+    public function planExercises(): HasMany
+    {
+        return $this->hasMany(TrainingPlanExercise::class, 'plan_id')->orderBy('day_of_week')->orderBy('order_index');
+    }
+
+    /**
+     * 关联：饮食计划
+     */
+    public function nutritionPlans(): HasMany
+    {
+        return $this->hasMany(UserNutritionPlan::class, 'plan_id')->orderBy('day_of_week')->orderBy('meal_type')->orderBy('order_index');
+    }
     
     /**
      * 检查是否为AI生成的计划
@@ -164,6 +181,14 @@ class TrainingPlan extends Model
     public function scopeAIGenerated($query)
     {
         return $query->where('type', 'ai_generated');
+    }
+
+    /**
+     * Scope: 手动创建的计划
+     */
+    public function scopeManual($query)
+    {
+        return $query->where('type', 'manual');
     }
     
     /**
