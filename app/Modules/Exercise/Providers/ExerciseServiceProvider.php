@@ -30,14 +30,10 @@ class ExerciseServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // 加载模块路由 - 使用统一的routes/modules目录
-        $this->loadRoutesFrom(base_path('routes/modules/exercise.php'));
-        
+        // 路由已在 routes/api.php 中通过 require 引入
+
         // 加载模块迁移
         $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
-        
-        // 注册事件监听器
-        // Event::listen(ExerciseCreated::class, UpdateExerciseCache::class);
     }
 }
 

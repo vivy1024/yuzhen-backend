@@ -5,6 +5,14 @@
 
 ---
 
+## #4 (chore) 路由双重加载修复 + 测试路由清理 — 2026-02-22
+
+- 修复 4 个 ServiceProvider 路由双重注册（Exercise/Food/Training/User）
+  - `loadRoutesFrom()` 与 `routes/api.php` 的 `require` 重复加载，导致 43 条无 `api/` 前缀的路由暴露
+  - 路由总数 291 → 248，消除所有非 api 前缀的重复路由
+- 删除 `routes/api_test.php`（遗留调试文件，暴露数据库配置信息）
+- 对应产品版本：v1.1.0
+
 ## #3 (feat) 知识库 API + FormRequest 安全加固 — 2026-02-21
 
 - 新增 KnowledgeController：5 个 API 端点（列表/详情/分类树/卡片/搜索）
