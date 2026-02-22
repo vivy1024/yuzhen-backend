@@ -5,6 +5,33 @@
 
 ---
 
+## #12 (refactor) CreditService.php Trait 拆分 — 2026-02-23
+
+对应产品版本：v1.1.0（内部重构，产品版本不动）
+
+- 777 行 → 3 Trait + 1 facade 拆分（`Credit/` 子目录）
+- `CreditCalculatorTrait`：积分计算 + 会员等级查询 + 升级提示
+- `CreditQueryTrait`：余额查询 + 充足性检查 + 历史记录 + 系统统计
+- `CreditMutationTrait`：记录消耗 + 配额重置 + 添加/扣减额度
+- CreditService 保留常量定义 + `use` 三个 Trait
+- 验证：203 tests passed / 737 assertions / 0 failed
+
+---
+
+## #11 (refactor) InternalChatController.php 拆分 — 2026-02-23
+
+对应产品版本：v1.1.0（内部重构，产品版本不动）
+
+- 916 行 → 3 Controller 拆分
+- `ChatSessionController`：会话管理（save/feedback/history/personalization/count/fewshot）
+- `ChatMessageController`：消息/话题管理（saveTopic/saveMessage/clearTopic）
+- `ChatSearchController`：搜索（searchSimilarConversations + 关键词提取）
+- 更新 `routes/internal.php` 路由指向新 Controller
+- URL 路径不变，API 完全向后兼容
+- 验证：203 tests passed / 0 failed
+
+---
+
 ## #10 (feat) Web Push 推送通知系统 — 2026-02-22
 
 - 安装 `minishlink/web-push` v10 PHP 库
