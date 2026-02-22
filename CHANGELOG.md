@@ -5,6 +5,13 @@
 
 ---
 
+## #5 (feat) Prometheus /metrics 端点 + Feature 测试 — 2026-02-22
+
+- 新增 `PrometheusMetricsController`：`/metrics` 端点暴露 HTTP 请求计数、MySQL 连接数、PHP 内存、应用查询量
+- 新增 3 个 Feature 测试：CreditServiceTest(5)、InternalChatControllerTest(6)、AdminKpiControllerTest(5)
+- prometheus.yml 添加 Laravel scrape target（job_name=laravel）
+- 对应产品版本：v1.1.0
+
 ## #4 (chore) 路由双重加载修复 + 测试路由清理 — 2026-02-22
 
 - 修复 4 个 ServiceProvider 路由双重注册（Exercise/Food/Training/User）
