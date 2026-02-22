@@ -3,7 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use App\Modules\User\Controllers\InternalUserController;
 use App\Modules\Membership\Controllers\InternalMembershipController;
-use App\Modules\Chat\Controllers\InternalChatController;
+use App\Modules\Chat\Controllers\ChatSessionController;
+use App\Modules\Chat\Controllers\ChatMessageController;
+use App\Modules\Chat\Controllers\ChatSearchController;
 use App\Modules\Training\Controllers\InternalTrainingController;
 use App\Http\Controllers\Internal\InternalCreditController;
 use App\Http\Controllers\Internal\UsageReportController;
@@ -32,24 +34,24 @@ Route::prefix('internal')->middleware(['internal.api'])->group(function () {
     Route::get('/membership/user/{userId}', [InternalMembershipController::class, 'getUserMembership']);
     Route::post('/membership/increment-usage', [InternalMembershipController::class, 'incrementUsage']);
     
-    // 对话记录API（为MCO服务提供）
-    Route::post('/chat/save-session', [InternalChatController::class, 'saveChatSession']);
-    Route::post('/chat/update-feedback', [InternalChatController::class, 'updateFeedback']);
-    Route::get('/chat/user/{userId}/history', [InternalChatController::class, 'getUserChatHistory']);
-    Route::get('/chat/high-quality', [InternalChatController::class, 'getHighQualitySessions']);
-    
-    // 话题和消息API（为DAML-RAG多轮对话提供）
-    Route::post('/chat/save-topic', [InternalChatController::class, 'saveTopic']);
-    Route::post('/chat/save-message', [InternalChatController::class, 'saveMessage']);
-    Route::delete('/chat/clear-topic/{topicId}', [InternalChatController::class, 'clearTopic']);
-    
-    // 三轨评分API（为DAML-RAG工作流步骤12提供）
-    Route::post('/chat/update-personalization', [InternalChatController::class, 'updatePersonalization']);
-    Route::get('/chat/session-count/{userId}', [InternalChatController::class, 'getSessionCount']);
-    Route::get('/chat/fewshot-eligibility/{sessionId}', [InternalChatController::class, 'checkFewshotEligibility']);
-    
-    // Few-Shot降级搜索API（@requirements 4.6）
-    Route::post('/chat/search-similar', [InternalChatController::class, 'searchSimilarConversations']);
+    // 对话记录API（为MCP服务提供）— ChatSessionController
+    Route::post('/chat/save-session', [ChatSessionController::class, 'saveChatSession']);
+    Route::post('/chat/update-feedback', [ChatSessionController::class, 'updateFeedback']);
+    Route::get('/chat/user/{userId}/history', [ChatSessionController::class, 'getUserChatHistory']);
+    Route::get('/chat/high-quality', [ChatSessionController::class, 'getHighQualitySessions']);
+
+    // 话题和消息API（为DAML-RAG多轮对话提供）— ChatMessageController
+    Route::post('/chat/save-topic', [ChatMessageController::class, 'saveTopic']);
+    Route::post('/chat/save-message', [ChatMessageController::class, 'saveMessage']);
+    Route::delete('/chat/clear-topic/{topicId}', [ChatMessageController::class, 'clearTopic']);
+
+    // 三轨评分API（为DAML-RAG工作流步骤12提供）— ChatSessionController
+    Route::post('/chat/update-personalization', [ChatSessionController::class, 'updatePersonalization']);
+    Route::get('/chat/session-count/{userId}', [ChatSessionController::class, 'getSessionCount']);
+    Route::get('/chat/fewshot-eligibility/{sessionId}', [ChatSessionController::class, 'checkFewshotEligibility']);
+
+    // Few-Shot降级搜索API（@requirements 4.6）— ChatSearchController
+    Route::post('/chat/search-similar', [ChatSearchController::class, 'searchSimilarConversations']);
     
     // 训练日志API（为DAML-RAG提供）
     Route::get('/training-logs/{userId}', [InternalTrainingController::class, 'getTrainingLogs']);
