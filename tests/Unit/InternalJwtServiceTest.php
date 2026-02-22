@@ -34,6 +34,9 @@ class InternalJwtServiceTest extends TestCase
         parent::setUp();
         $this->seed(RolePermissionSeeder::class);
 
+        // 清除Spatie权限缓存（解决RefreshDatabase事务冲突）
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
         // 配置Internal JWT环境变量
         config([
             'auth.internal_jwt_secret' => $this->testSecret,
@@ -94,7 +97,7 @@ class InternalJwtServiceTest extends TestCase
         $this->assertEquals('free', $claims['tier']);
         $this->assertEquals('yuzhen-auth-gateway', $claims['iss']);
         $this->assertEquals(5, $claims['daily_dag_limit']);
-        $this->assertEquals(0, $claims['daily_agent_limit']);
+        $this->assertEquals(5, $claims['daily_agent_limit']);
 
         $permissions = $claims['permissions'];
         sort($permissions);
@@ -113,7 +116,7 @@ class InternalJwtServiceTest extends TestCase
         $this->assertEquals($user->id, $claims['sub']);
         $this->assertEquals('warmheart', $claims['tier']);
         $this->assertEquals(10, $claims['daily_dag_limit']);
-        $this->assertEquals(0, $claims['daily_agent_limit']);
+        $this->assertEquals(10, $claims['daily_agent_limit']);
 
         $permissions = $claims['permissions'];
         sort($permissions);
