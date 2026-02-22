@@ -1,6 +1,15 @@
 <?php
 
 /**
+ * ⚠️ DEPRECATED - 此文件已被 quality-rating.php (v2) 替代
+ * 
+ * 功能已迁移至 QualityRatingController，通过 /api/v2/quality/* 端点提供。
+ * 此文件未被 api.php 加载，保留仅供参考。
+ * 
+ * @deprecated 使用 quality-rating.php 替代
+ * @see routes/modules/quality-rating.php
+ * @see App\Http\Controllers\Api\QualityRatingController
+ *
  * Chat Session Rating Module - 会话评分管理
  *
  * 基于三轨评分系统的完整实现：
