@@ -5,6 +5,20 @@
 
 ---
 
+## #13 (feat) 统一可观测性仪表盘 — 2026-02-24
+
+对应产品版本：v1.3.0
+
+- Migration: chat_sessions 新增 12 个性能监控字段 + 4 个索引
+- ChatSession Model: $fillable/$casts 扩展 + 3 个新 Scope + updatePerformanceMetrics()
+- InternalCreditController: 接收性能字段 → 写入 chat_sessions + estimateCost() + 缓存清除
+- AdminMetricsController: 6 个聚合 API（system-overview/model-comparison/mode-comparison/tool-usage/user-consumption/quality-trend）
+- Redis 缓存层: TTL 10 分钟，key 格式 admin:metrics:{type}:{days}，写入时自动清除
+- 路由: /api/admin/metrics/dashboard/* 6 个端点
+- PHPUnit: AdminMetricsControllerTest 14 用例 / 48 断言全部通过
+
+---
+
 ## #12 (refactor) CreditService.php Trait 拆分 — 2026-02-23
 
 对应产品版本：v1.1.0（内部重构，产品版本不动）

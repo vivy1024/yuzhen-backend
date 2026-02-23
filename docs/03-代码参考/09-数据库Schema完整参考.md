@@ -472,7 +472,7 @@
 ### 3.2 chat_sessions — 对话记录（含三轨评分）
 
 **Model**: `App\Modules\Chat\Models\ChatSession`
-**Migration**: create_chat_sessions + add_three_track_rating + add_training_effect + add_topic_id
+**Migration**: create_chat_sessions + add_three_track_rating + add_training_effect + add_topic_id + add_performance_fields
 
 | 字段名 | 类型 | Nullable | Default | 索引 | 说明 |
 |--------|------|----------|---------|------|------|
@@ -504,10 +504,24 @@
 | fewshot_eligible | boolean | NO | false | IDX | Few-Shot条件 |
 | overall_score | decimal(3,2) | YES | NULL | IDX | 综合评分(0-5) |
 | training_effect | varchar(50) | YES | NULL | - | 训练效果标签 |
+| **性能监控字段** | | | | | |
+| ttfb_ms | int unsigned | YES | NULL | - | 首字节时间(毫秒) |
+| duration_ms | int unsigned | YES | NULL | - | 总耗时(毫秒) |
+| tokens_per_sec | decimal(6,2) | YES | NULL | - | 令牌生成速率 |
+| backend_used | varchar(50) | YES | NULL | IDX | 实际后端(anthropic/deepseek/glm/siliconflow) |
+| execution_mode | enum(dag,agent) | NO | dag | IDX | 执行模式 |
+| template_name | varchar(100) | YES | NULL | - | 模板名称 |
+| input_tokens | int unsigned | NO | 0 | - | 输入Token数 |
+| output_tokens | int unsigned | NO | 0 | - | 输出Token数 |
+| estimated_cost | decimal(8,4) | YES | NULL | - | 估算费用(美元) |
+| credits_consumed | int unsigned | NO | 0 | - | 消耗积分 |
+| fallback_count | tinyint unsigned | NO | 0 | - | 降级次数 |
+| error_type | varchar(50) | YES | NULL | - | 错误类型 |
 | created_at | timestamp | NO | - | IDX | |
 | updated_at | timestamp | NO | - | - | |
 
-**Scope**: byUser, bySession, highQuality, fewShotEligible, byPersonalizationGrade, highPersonalization, byModel, recent
+**索引**: idx_cs_backend(backend_used), idx_cs_mode(execution_mode), idx_cs_date_backend(created_at, backend_used), idx_cs_date_mode(created_at, execution_mode)
+**Scope**: byUser, bySession, highQuality, fewShotEligible, byPersonalizationGrade, highPersonalization, byModel, recent, byBackend, byMode, withPerformance
 **关联**: belongsTo → User, ChatTopic; hasMany → ChatMessage, ExpertReview, TrainingPlan
 
 ---
