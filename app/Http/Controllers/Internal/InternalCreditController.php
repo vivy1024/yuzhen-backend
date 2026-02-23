@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Internal;
 
 use App\Infrastructure\Http\Controllers\BaseController;
+use App\Http\Controllers\Api\Admin\MetricsController as AdminMetricsController;
 use App\Models\ChatSession;
 use App\Services\CreditService;
 use Illuminate\Http\JsonResponse;
@@ -203,6 +204,9 @@ class InternalCreditController extends BaseController
                             'fallback_count' => $validated['fallback_count'] ?? 0,
                             'error_type' => $validated['error_type'] ?? null,
                         ]);
+
+                        // 清除仪表盘缓存
+                        AdminMetricsController::clearDashboardCache();
                     }
                 } catch (\Exception $e) {
                     Log::warning('chat_sessions性能字段写入失败（不影响积分记录）', [
