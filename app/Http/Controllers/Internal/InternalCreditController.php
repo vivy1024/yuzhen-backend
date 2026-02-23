@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Internal;
 
 use App\Infrastructure\Http\Controllers\BaseController;
+use App\Http\Controllers\Api\Admin\MetricsController as AdminMetricsController;
+use App\Models\ChatSession;
 use App\Services\CreditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -98,6 +100,13 @@ class InternalCreditController extends BaseController
                 'conversation_id' => 'nullable|string|max:100',
                 'input_tokens' => 'nullable|integer|min:0',
                 'output_tokens' => 'nullable|integer|min:0',
+                // 性能监控字段（unified-observability-dashboard）
+                'ttfb_ms' => 'nullable|integer|min:0',
+                'duration_ms' => 'nullable|integer|min:0',
+                'tokens_per_sec' => 'nullable|numeric|min:0',
+                'backend_used' => 'nullable|string|max:50',
+                'fallback_count' => 'nullable|integer|min:0',
+                'error_type' => 'nullable|string|max:50',
             ]);
 
             if ($validator->fails()) {
@@ -172,6 +181,41 @@ class InternalCreditController extends BaseController
             $balance = $this->creditService->getBalance($userId);
             $transaction = $result['transaction'];
 
+            // 6. 写入性能字段到 chat_sessions（事务外，失败不影响积分记录）
+            if (!empty($validated['conversation_id'])) {
+                try {
+                    $chatSession = ChatSession::where('session_id', $validated['conversation_id'])->first();
+                    if ($chatSession) {
+                        $chatSession->updatePerformanceMetrics([
+                            'ttfb_ms' => $validated['ttfb_ms'] ?? null,
+                            'duration_ms' => $validated['duration_ms'] ?? null,
+                            'tokens_per_sec' => $validated['tokens_per_sec'] ?? null,
+                            'backend_used' => $validated['backend_used'] ?? null,
+                            'execution_mode' => $validated['mode'],
+                            'template_name' => $validated['template_name'] ?? null,
+                            'input_tokens' => $validated['input_tokens'] ?? 0,
+                            'output_tokens' => $validated['output_tokens'] ?? 0,
+                            'estimated_cost' => $this->estimateCost(
+                                $validated['backend_used'] ?? '',
+                                $validated['input_tokens'] ?? 0,
+                                $validated['output_tokens'] ?? 0
+                            ),
+                            'credits_consumed' => $transaction->credits,
+                            'fallback_count' => $validated['fallback_count'] ?? 0,
+                            'error_type' => $validated['error_type'] ?? null,
+                        ]);
+
+                        // 清除仪表盘缓存
+                        AdminMetricsController::clearDashboardCache();
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('chat_sessions性能字段写入失败（不影响积分记录）', [
+                        'conversation_id' => $validated['conversation_id'],
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             if ($result['idempotent']) {
                 Log::info('DAML-RAG积分记录跳过（幂等）', [
                     'user_id' => $userId,
@@ -207,5 +251,30 @@ class InternalCreditController extends BaseController
             // 返回通用错误消息，不泄露内部异常详情
             return $this->fail('积分记录失败，请稍后重试', 500);
         }
+    }
+
+    /**
+     * 估算 API 调用费用（美元）
+     *
+     * 各模型每 1K token 费率：
+     * - anthropic (Haiku 4.5): input $0.00025, output $0.00125
+     * - deepseek (V3): input $0.00014, output $0.00028
+     * - glm / siliconflow: 免费
+     */
+    private function estimateCost(string $backend, int $inputTokens, int $outputTokens): ?float
+    {
+        $rates = [
+            'anthropic'   => ['input' => 0.00025, 'output' => 0.00125],
+            'deepseek'    => ['input' => 0.00014, 'output' => 0.00028],
+            'glm'         => ['input' => 0.0, 'output' => 0.0],
+            'siliconflow' => ['input' => 0.0, 'output' => 0.0],
+        ];
+
+        $rate = $rates[$backend] ?? null;
+        if (!$rate) {
+            return null;
+        }
+
+        return round(($inputTokens * $rate['input'] + $outputTokens * $rate['output']) / 1000, 4);
     }
 }
