@@ -9,6 +9,7 @@ use App\Modules\Admin\Controllers\MetricsProxyController;
 use App\Modules\Admin\Controllers\UserCreditsController;
 use App\Modules\Admin\Controllers\AdminKpiController;
 use App\Http\Controllers\Admin\DataMigrationController;
+use App\Http\Controllers\Api\Admin\MetricsController as AdminMetricsController;
 
 /**
  * Admin Module Routes
@@ -144,6 +145,16 @@ Route::prefix('admin')->middleware(['jwt.auth', 'admin'])->group(function () {
         
         // Prometheus原始指标
         Route::get('/prometheus/raw', [MetricsProxyController::class, 'prometheusRaw']);
+
+        // ========== 统一仪表盘聚合API（MySQL + Redis缓存） ==========
+        Route::prefix('dashboard')->group(function () {
+            Route::get('/system-overview', [AdminMetricsController::class, 'systemOverview']);
+            Route::get('/model-comparison', [AdminMetricsController::class, 'modelComparison']);
+            Route::get('/mode-comparison', [AdminMetricsController::class, 'modeComparison']);
+            Route::get('/tool-usage', [AdminMetricsController::class, 'toolUsage']);
+            Route::get('/user-consumption', [AdminMetricsController::class, 'userConsumption']);
+            Route::get('/quality-trend', [AdminMetricsController::class, 'qualityTrend']);
+        });
     });
     
     // ========== 运营 KPI ==========
