@@ -46,6 +46,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool $fewshot_eligible 是否符合Few-Shot条件
  * @property float|null $overall_score 综合评分（0-5）
  * @property string|null $qdrant_point_id Qdrant向量点ID
+ * @property int|null $ttfb_ms 首字节时间(毫秒)
+ * @property int|null $duration_ms 总耗时(毫秒)
+ * @property float|null $tokens_per_sec 令牌生成速率
+ * @property string|null $backend_used 实际后端
+ * @property string $execution_mode 执行模式(dag/agent)
+ * @property string|null $template_name 模板名称
+ * @property int $input_tokens 输入Token数
+ * @property int $output_tokens 输出Token数
+ * @property float|null $estimated_cost 估算费用(美元)
+ * @property int $credits_consumed 消耗积分
+ * @property int $fallback_count 降级次数
+ * @property string|null $error_type 错误类型
  * @property \Carbon\Carbon $created_at 创建时间
  * @property \Carbon\Carbon $updated_at 更新时间
  * 
@@ -93,6 +105,19 @@ class ChatSession extends Model
         'overall_score',
         // 训练效果标签 @requirements 4.4
         'training_effect',
+        // 性能监控字段（unified-observability-dashboard）
+        'ttfb_ms',
+        'duration_ms',
+        'tokens_per_sec',
+        'backend_used',
+        'execution_mode',
+        'template_name',
+        'input_tokens',
+        'output_tokens',
+        'estimated_cost',
+        'credits_consumed',
+        'fallback_count',
+        'error_type',
     ];
 
     /**
@@ -116,6 +141,15 @@ class ChatSession extends Model
         // 综合评分
         'fewshot_eligible' => 'boolean',
         'overall_score' => 'decimal:2',
+        // 性能监控字段
+        'ttfb_ms' => 'integer',
+        'duration_ms' => 'integer',
+        'tokens_per_sec' => 'decimal:2',
+        'input_tokens' => 'integer',
+        'output_tokens' => 'integer',
+        'estimated_cost' => 'decimal:4',
+        'credits_consumed' => 'integer',
+        'fallback_count' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -422,6 +456,54 @@ class ChatSession extends Model
     public function scopeRecent($query, int $days = 7)
     {
         return $query->where('created_at', '>=', now()->subDays($days));
+    }
+
+    /**
+     * Scope: 按实际后端筛选
+     */
+    public function scopeByBackend($query, string $backend)
+    {
+        return $query->where('backend_used', $backend);
+    }
+
+    /**
+     * Scope: 按执行模式筛选
+     */
+    public function scopeByMode($query, string $mode)
+    {
+        return $query->where('execution_mode', $mode);
+    }
+
+    /**
+     * Scope: 只查有性能数据的记录
+     */
+    public function scopeWithPerformance($query)
+    {
+        return $query->whereNotNull('ttfb_ms');
+    }
+
+    /**
+     * 更新性能监控字段
+     *
+     * 由 InternalCreditController::record() 调用，
+     * 数据来源：stream_executor → credit_reporter → 后端
+     */
+    public function updatePerformanceMetrics(array $data): bool
+    {
+        $allowed = [
+            'ttfb_ms', 'duration_ms', 'tokens_per_sec',
+            'backend_used', 'execution_mode', 'template_name',
+            'input_tokens', 'output_tokens', 'estimated_cost',
+            'credits_consumed', 'fallback_count', 'error_type',
+        ];
+
+        $filtered = array_intersect_key($data, array_flip($allowed));
+
+        if (empty($filtered)) {
+            return false;
+        }
+
+        return $this->update($filtered);
     }
 }
 
