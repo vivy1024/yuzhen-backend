@@ -9,6 +9,7 @@ use App\Models\UserNutritionPlan;
 use App\Http\Requests\UserPlanRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use App\Models\TrainingLog;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -369,6 +370,150 @@ class TrainingPlanController extends BaseController
             }
         } catch (\Exception $e) {
             return $this->handleException($e, '复制训练计划');
+        }
+    }
+
+    /**
+     * 激活训练计划
+     * POST /api/training/plans/{id}/activate
+     */
+    public function activate(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            // 停用用户的其他计划
+            TrainingPlan::where('user_id', $user->id)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+
+            // 激活当前计划
+            $plan = TrainingPlan::where('user_id', $user->id)->findOrFail($id);
+            $plan->update(['is_active' => true]);
+
+            return $this->success([
+                'id' => $plan->id,
+                'is_active' => true,
+            ], '计划已激活');
+        } catch (\Exception $e) {
+            return $this->handleException($e, '激活训练计划');
+        }
+    }
+
+    /**
+     * 开始训练计划
+     * POST /api/training/plans/{id}/start
+     */
+    public function start(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            $plan = TrainingPlan::where('user_id', $user->id)->findOrFail($id);
+            $plan->update(['started_at' => now()]);
+
+            return $this->success([
+                'id' => $plan->id,
+                'started_at' => $plan->fresh()->started_at->toIso8601String(),
+            ], '计划已开始');
+        } catch (\Exception $e) {
+            return $this->handleException($e, '开始训练计划');
+        }
+    }
+
+    /**
+     * 导出训练计划
+     * POST /api/training/plans/{id}/export
+     */
+    public function export(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            $plan = TrainingPlan::where('user_id', $user->id)
+                ->with(['planExercises.exercise', 'nutritionPlans.food'])
+                ->findOrFail($id);
+
+            return $this->success([
+                'plan' => [
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'description' => $plan->description,
+                    'weeks' => $plan->duration_weeks,
+                    'frequency' => $plan->workouts_per_week,
+                    'difficulty' => $plan->difficulty,
+                    'goal' => $plan->goal,
+                    'type' => $plan->type,
+                    'createdAt' => $plan->created_at->toIso8601String(),
+                ],
+                'exercises' => $plan->planExercises->map(fn ($e) => [
+                    'exerciseName' => $e->exercise_name,
+                    'dayOfWeek' => $e->day_of_week,
+                    'sets' => $e->sets,
+                    'reps' => $e->reps,
+                    'weight' => $e->weight,
+                    'restTime' => $e->rest_time,
+                    'notes' => $e->notes,
+                ]),
+            ], '导出成功');
+        } catch (\Exception $e) {
+            return $this->handleException($e, '导出训练计划');
+        }
+    }
+
+    /**
+     * 获取训练计划进度统计
+     * GET /api/training/plans/{id}/progress-stats
+     */
+    public function progressStats(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            $plan = TrainingPlan::where('user_id', $user->id)->findOrFail($id);
+
+            $logs = TrainingLog::where('training_plan_id', $id)
+                ->orderBy('session_date', 'asc')
+                ->get();
+
+            $completedSessions = $logs->count();
+            $totalSessions = $plan->total_sessions ?? 0;
+            $completionRate = $totalSessions > 0
+                ? round(($completedSessions / $totalSessions) * 100, 1)
+                : 0;
+
+            return $this->success([
+                'total_planned_sessions' => $totalSessions,
+                'completed_sessions' => $completedSessions,
+                'completion_rate' => $completionRate,
+                'avg_completion_rate' => round(($logs->avg('completion_rate') ?? 0) * 100, 1),
+                'avg_rpe' => round($logs->avg('avg_rpe') ?? 0, 1),
+                'last_training_date' => $logs->max('session_date')?->format('Y-m-d'),
+            ], '获取计划进度统计成功');
+        } catch (\Exception $e) {
+            return $this->handleException($e, '获取计划进度统计');
+        }
+    }
+
+    /**
+     * 获取训练计划关联的训练日志
+     * GET /api/training/plans/{id}/training-logs
+     */
+    public function trainingLogs(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            // 验证计划属于当前用户
+            TrainingPlan::where('user_id', $user->id)->findOrFail($id);
+
+            $logs = TrainingLog::where('training_plan_id', $id)
+                ->orderBy('session_date', 'desc')
+                ->get();
+
+            return $this->success($logs, '获取计划训练日志成功');
+        } catch (\Exception $e) {
+            return $this->handleException($e, '获取计划训练日志');
         }
     }
 

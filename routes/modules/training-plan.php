@@ -21,6 +21,11 @@ Route::middleware('jwt.auth')->prefix('training')->group(function () {
     Route::put('/plans/{id}', [TrainingPlanController::class, 'update']);
     Route::delete('/plans/{id}', [TrainingPlanController::class, 'destroy']);
     Route::post('/plans/{id}/copy', [TrainingPlanController::class, 'copy']);
+    Route::post('/plans/{id}/activate', [TrainingPlanController::class, 'activate']);
+    Route::post('/plans/{id}/start', [TrainingPlanController::class, 'start']);
+    Route::post('/plans/{id}/export', [TrainingPlanController::class, 'export']);
+    Route::get('/plans/{id}/progress-stats', [TrainingPlanController::class, 'progressStats']);
+    Route::get('/plans/{id}/training-logs', [TrainingPlanController::class, 'trainingLogs']);
 
     // 模板库
     Route::get('/templates', [PlanTemplateController::class, 'index']);

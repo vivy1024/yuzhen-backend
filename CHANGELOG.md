@@ -5,6 +5,24 @@
 
 ---
 
+## #14 (feat) 前端 API 缺口修复 — 后端路由补全 — 2026-02-24
+
+对应产品版本：v1.4.0
+
+- training-plan.php: 新增 5 条路由（activate/start/export/progress-stats/training-logs）
+- Api\TrainingPlanController: 新增 activate/start/export/progressStats/trainingLogs 方法
+- training-log.php: 新增 2 条路由（complete/from-plan）
+- TrainingLogController: 新增 complete/createFromPlan 方法
+- UserSettingsController（新建）: getSettings/updateSettings/changePassword/deleteAccount/getVersion
+- AvatarController（新建）: upload 头像上传（jpg/png/webp，max 2MB）
+- user-settings.php（新建）: 6 条路由（settings/change-password/account/version/avatar）
+- Migration: user_profiles 新增 preferences JSON 字段
+- Migration: users 新增 soft deletes（deleted_at）
+- User Model: 添加 SoftDeletes trait
+- UserProfile Model: $fillable/$casts 添加 preferences
+
+---
+
 ## #13 (feat) 统一可观测性仪表盘 — 2026-02-24
 
 对应产品版本：v1.3.0
