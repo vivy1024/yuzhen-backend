@@ -30,13 +30,13 @@ class UpdateProfileRequest extends FormRequest
             'region' => 'nullable|string|max:100',
             'sleep_hours' => 'nullable|numeric|min:0|max:24',
             
-            // 健身目标（统一化后的8个选项）
+            // 健身目标（统一英文枚举，与三端数据契约一致）
             // 支持两种格式：primary_goal（字符串）或 primary_goals（数组）
-            'primary_goal' => 'nullable|string|in:增肌,减脂,增强力量,提高耐力,塑形,功能性训练,运动表现,康复训练',
+            'primary_goal' => 'nullable|string|in:hypertrophy,fat_loss,strength,endurance,body_shaping,general_fitness,functional,rehabilitation',
             'primary_goals' => 'nullable|array',
-            'primary_goals.*' => 'nullable|string|in:增肌,减脂,增强力量,提高耐力,塑形,功能性训练,运动表现,康复训练',
+            'primary_goals.*' => 'nullable|string|in:hypertrophy,fat_loss,strength,endurance,body_shaping,general_fitness,functional,rehabilitation',
             'secondary_goals' => 'nullable|array',
-            'secondary_goals.*' => 'nullable|string|in:增肌,减脂,增强力量,提高耐力,塑形,功能性训练,运动表现,康复训练',
+            'secondary_goals.*' => 'nullable|string|in:hypertrophy,fat_loss,strength,endurance,body_shaping,general_fitness,functional,rehabilitation',
             'target_weight' => 'nullable|numeric|min:20|max:500',
             'training_split' => 'nullable|string',
             
@@ -81,8 +81,8 @@ class UpdateProfileRequest extends FormRequest
             'fitness_goal.in' => '健身目标无效',
             'fitness_level.in' => '健身水平无效',
             'preferred_rest_pattern.in' => '休息模式必须是：练一休一、练二休一、练三休一、练四休一、练五休一、练五休二、练六休一、练七休一 之一',
-            'primary_goal.in' => '主要训练目标必须是：增肌、减脂、增强力量、提高耐力、塑形、功能性训练、运动表现、康复训练 之一',
-            'secondary_goals.*.in' => '次要训练目标必须是：增肌、减脂、增强力量、提高耐力、塑形、功能性训练、运动表现、康复训练 之一',
+            'primary_goal.in' => '主要训练目标必须是：hypertrophy(增肌)、fat_loss(减脂)、strength(力量)、endurance(耐力)、body_shaping(塑形)、general_fitness(综合)、functional(功能性)、rehabilitation(康复) 之一',
+            'secondary_goals.*.in' => '次要训练目标必须是：hypertrophy、fat_loss、strength、endurance、body_shaping、general_fitness、functional、rehabilitation 之一',
             'available_equipment.*.in' => '器械选项无效，请选择有效的器械',
             'injury_history.*.in' => '伤病选项无效，请选择具体的伤病类型',
         ];
