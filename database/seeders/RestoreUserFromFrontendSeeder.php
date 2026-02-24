@@ -159,7 +159,7 @@ class RestoreUserFromFrontendSeeder extends Seeder
         "training_recommendation": {
           "focus": "基础建设",
           "suggestions": [
-            "规律力量训练（每周3-5次）",
+            "规律力量训练（每星期3-5次）",
             "合理营养摄入（蛋白质每kg体重1.6-2g）",
             "循序渐进，避免急功近利",
             "重视恢复，确保充足睡眠"
@@ -322,7 +322,7 @@ class RestoreUserFromFrontendSeeder extends Seeder
         "training_recommendation": {
           "focus": "基础建设",
           "suggestions": [
-            "规律力量训练（每周3-5次）",
+            "规律力量训练（每星期3-5次）",
             "合理营养摄入（蛋白质每kg体重1.6-2g）",
             "循序渐进，避免急功近利",
             "重视恢复，确保充足睡眠"

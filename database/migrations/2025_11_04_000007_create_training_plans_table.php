@@ -23,7 +23,7 @@ return new class extends Migration
             $table->enum('goal', ['lose_weight', 'gain_muscle', 'maintain', 'improve_fitness'])->nullable()->comment('训练目标');
             $table->enum('difficulty', ['novice', 'beginner', 'intermediate', 'advanced'])->nullable()->comment('难度');
             $table->integer('duration_weeks')->default(4)->comment('总周数');
-            $table->integer('workouts_per_week')->default(3)->comment('每周训练次数');
+            $table->integer('workouts_per_week')->default(3)->comment('每星期训练次数');
             $table->boolean('is_active')->default(true)->comment('是否激活');
             $table->datetime('started_at')->nullable()->comment('开始时间');
             $table->datetime('completed_at')->nullable()->comment('完成时间');
