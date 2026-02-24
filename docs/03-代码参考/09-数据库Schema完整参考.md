@@ -115,7 +115,7 @@
 | id | bigint unsigned | NO | AI | PK | |
 | user_id | bigint unsigned | NO | - | UNIQUE, FK | |
 | basic_info | json | YES | NULL | - | age, gender, height, weight等 |
-| fitness_goals | json | YES | NULL | - | primary_goals, target_weight等 |
+| fitness_goals | json | YES | NULL | - | primary_goal, target_weight等（见下方JSON结构） |
 | training_preferences | json | YES | NULL | - | training_split, equipment等 |
 | health_status | json | YES | NULL | - | injuries, chronic_diseases等 |
 | nutrition_profile | json | YES | NULL | - | daily_calories, protein等 |
@@ -137,6 +137,27 @@
 | updated_at | timestamp | NO | - | - | |
 
 **关联**: belongsTo → User
+
+**fitness_goals JSON 结构**:
+```json
+{
+  "primary_goal": "muscle_gain",     // 数据层枚举值（见下表）
+  "secondary_goals": ["strength"],
+  "target_weight": 75,
+  "target_body_fat": 15
+}
+```
+
+| 数据层枚举（MySQL存储） | DAML-RAG 工具层枚举 | 中文 | 说明 |
+|------------------------|---------------------|------|------|
+| `muscle_gain` | `hypertrophy` | 增肌 | task_executor `_GOAL_NORMALIZE` 自动转换 |
+| `weight_loss` | `fat_loss` | 减脂 | 同上 |
+| `fat_loss` | `fat_loss` | 减脂 | 新旧值均可 |
+| `strength` | `strength` | 力量 | 无需转换 |
+| `general_fitness` | `general_fitness` | 综合健身 | 无需转换 |
+| `endurance` | `endurance` | 耐力 | 无需转换 |
+
+> 详见 `daml-rag-server/docs/03-代码参考/12-枚举映射说明.md`
 
 ---
 
