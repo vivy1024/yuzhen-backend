@@ -56,6 +56,7 @@ class UserProfile extends Model
         'is_mcp_temp',
         'mcp_session_id',
         'sync_source',
+        'preferences',
     ];
 
     /**
@@ -77,6 +78,7 @@ class UserProfile extends Model
         'streak_days' => 'integer',
         'total_training_days' => 'integer',
         'last_training_date' => 'date',
+        'preferences' => 'array',
     ];
 
     /**

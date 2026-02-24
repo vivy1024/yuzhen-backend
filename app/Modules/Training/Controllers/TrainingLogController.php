@@ -445,6 +445,89 @@ class TrainingLogController extends BaseController
     }
 
     /**
+     * 完成训练会话
+     *
+     * POST /api/training-logs/{id}/complete
+     */
+    public function complete(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return $this->fail('用户未认证', 401);
+            }
+
+            $log = TrainingLog::forUser($user->id)->find($id);
+            if (!$log) {
+                return $this->fail('训练日志不存在', 404);
+            }
+
+            $log->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+
+            // 更新训练计划进度
+            if ($log->training_plan_id) {
+                $this->updatePlanProgress($log->training_plan_id);
+            }
+
+            return $this->success($log->fresh(), '训练完成');
+        } catch (\Exception $e) {
+            return $this->handleException($e, '完成训练会话');
+        }
+    }
+
+    /**
+     * 从训练计划创建训练会话
+     *
+     * POST /api/training-logs/from-plan
+     */
+    public function createFromPlan(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return $this->fail('用户未认证', 401);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'plan_id' => 'required|integer|exists:training_plans,id',
+                'date' => 'nullable|date',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->fail('参数验证失败: ' . $validator->errors()->first(), 422);
+            }
+
+            $data = $validator->validated();
+            $plan = \App\Modules\Training\Models\TrainingPlan::where('user_id', $user->id)
+                ->findOrFail($data['plan_id']);
+
+            // 获取计划的动作列表
+            $exercises = [];
+            if (is_array($plan->exercises) && !empty($plan->exercises)) {
+                $exercises = $plan->exercises;
+            }
+
+            $log = new TrainingLog();
+            $log->user_id = $user->id;
+            $log->training_plan_id = $plan->id;
+            $log->session_date = $data['date'] ?? now()->toDateString();
+            $log->planned_exercises = $exercises;
+            $log->actual_exercises = [];
+            $log->status = 'in_progress';
+            $log->completion_rate = 0;
+            $log->avg_rpe = 0;
+            $log->save();
+
+            return $this->success($log, '训练会话已创建', 201);
+        } catch (\Exception $e) {
+            return $this->handleException($e, '从计划创建训练会话');
+        }
+    }
+
+    /**
      * 更新个人最佳记录（批量）
      */
     private function updatePersonalBests(int $userId, array $exercises): void

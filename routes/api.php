@@ -110,6 +110,9 @@ require __DIR__.'/modules/knowledge.php';
 // Push模块（推送通知）✅
 require __DIR__.'/modules/push.php';
 
+// User Settings模块（用户设置与账号安全）✅
+require __DIR__.'/modules/user-settings.php';
+
 // AI代理模块已移至 routes/web.php（无/api前缀）
 // require __DIR__.'/modules/ai-proxy.php';
 
