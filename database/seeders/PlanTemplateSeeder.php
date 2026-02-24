@@ -26,7 +26,7 @@ class PlanTemplateSeeder extends Seeder
                 ['name' => '上斜哑铃卧推', 'sets' => 3, 'reps' => '10-12', 'day_of_week' => 5],
                 ['name' => '坐姿划船', 'sets' => 3, 'reps' => '10-12', 'day_of_week' => 5],
             ]],
-            ['name' => '中级增肌分化', 'goal' => 'gain_muscle', 'level' => 'intermediate', 'weeks' => 8, 'freq' => 4, 'desc' => '推拉腿分化，每个肌群每周训练2次', 'exercises' => [
+            ['name' => '中级增肌分化', 'goal' => 'gain_muscle', 'level' => 'intermediate', 'weeks' => 8, 'freq' => 4, 'desc' => '推拉腿分化，每个肌群每星期训练2次', 'exercises' => [
                 ['name' => '杠铃卧推', 'sets' => 4, 'reps' => '8-10', 'day_of_week' => 1],
                 ['name' => '哑铃飞鸟', 'sets' => 3, 'reps' => '12', 'day_of_week' => 1],
                 ['name' => '杠铃划船', 'sets' => 4, 'reps' => '8-10', 'day_of_week' => 2],

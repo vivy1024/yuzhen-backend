@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $goal 训练目标
  * @property string|null $difficulty 难度
  * @property int $duration_weeks 总周数
- * @property int $workouts_per_week 每周训练次数
+ * @property int $workouts_per_week 每星期训练次数
  * @property array|null $exercises 动作列表（AI生成）
  * @property array|null $target_muscles 目标肌群列表
  * @property array|null $safety_notes 安全提示列表

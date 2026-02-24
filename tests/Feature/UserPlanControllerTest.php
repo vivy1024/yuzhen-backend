@@ -68,7 +68,7 @@ class UserPlanControllerTest extends TestCase
 
         $response = $this->actingAs($user)->postJson('/api/training/plans', [
             'name' => '我的增肌计划',
-            'description' => '每周3练，专注上肢',
+            'description' => '每星期3练，专注上肢',
             'goal' => 'gain_muscle',
             'difficulty' => 'intermediate',
             'duration_weeks' => 8,

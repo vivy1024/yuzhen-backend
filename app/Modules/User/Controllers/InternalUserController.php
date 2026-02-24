@@ -153,7 +153,7 @@ class InternalUserController extends BaseController
                 // ============ 健身目标 ============
                 // 前端使用 primary_goal（单数，字符串）和 secondary_goals（数组）
                 // 数据库中 fitness_goals 是 JSON 字段，存储格式为：
-                // { "primary_goal": "增肌", "secondary_goals": ["减脂"], "target_weight": 70 }
+                // { "primary_goal": "hypertrophy", "secondary_goals": ["fat_loss"], "target_weight": 70 }
                 'fitness_goals' => [
                     'primary_goal' => $fitnessGoals['primary_goal'] ?? null,
                     'secondary_goals' => $fitnessGoals['secondary_goals'] ?? [],

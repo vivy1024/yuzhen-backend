@@ -46,4 +46,12 @@ Route::prefix('training-logs')->middleware(['jwt.auth'])->group(function () {
     // DELETE /api/training-logs/{id}
     Route::delete('/{id}', [TrainingLogController::class, 'destroy'])->where('id', '[0-9]+');
 
+    // 完成训练会话
+    // POST /api/training-logs/{id}/complete
+    Route::post('/{id}/complete', [TrainingLogController::class, 'complete'])->where('id', '[0-9]+');
+
+    // 从训练计划创建训练会话
+    // POST /api/training-logs/from-plan
+    Route::post('/from-plan', [TrainingLogController::class, 'createFromPlan']);
+
 });

@@ -68,6 +68,11 @@ database/migrations/        # 数据库迁移（禁止 fresh/refresh）
 
 | 场景 | 参考文件 |
 |------|---------|
+| ⭐ 数据库 Schema（35张表完整定义） | `docs/03-代码参考/09-数据库Schema完整参考.md` |
+| 数据库速查（表名+核心字段） | `.kiro/steering/database-quick-reference.md` |
 | API 响应标准详细版 | `.kiro/steering/api-design.md` |
 | Zeabur 生产环境 | `.kiro/steering/zeabur-production.md` |
 | Zeabur 环境变量 | `.kiro/steering/zeabur-env-vars.md` |
+| 跨端枚举/字段变更 | `.kiro/steering/cross-stack-data-contract.md` |
+
+> ⚠️ 涉及表结构、字段类型、migration 时，必须先读 `09-数据库Schema完整参考.md`。修改表结构后同步更新该文档。
