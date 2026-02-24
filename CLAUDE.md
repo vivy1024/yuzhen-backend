@@ -71,3 +71,4 @@ database/migrations/        # 数据库迁移（禁止 fresh/refresh）
 | API 响应标准详细版 | `.kiro/steering/api-design.md` |
 | Zeabur 生产环境 | `.kiro/steering/zeabur-production.md` |
 | Zeabur 环境变量 | `.kiro/steering/zeabur-env-vars.md` |
+| 跨端枚举/字段变更 | `.kiro/steering/cross-stack-data-contract.md` |

@@ -107,10 +107,10 @@ class TrainingPlanController extends BaseController
             $data = $request->validate([
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string|max:1000',
-                'goal' => 'nullable|string|in:lose_weight,gain_muscle,maintain,improve_fitness',
+                'goal' => 'nullable|string|in:hypertrophy,fat_loss,strength,endurance,body_shaping,general_fitness,functional,rehabilitation,lose_weight,gain_muscle,maintain,improve_fitness', // lose_weight,gain_muscle,maintain,improve_fitness deprecated, 保留兼容
                 'frequency' => 'nullable|integer|min:1|max:7',
                 'duration' => 'nullable|integer|min:1|max:52',
-                'difficulty_level' => 'nullable|string|in:beginner,intermediate,advanced',
+                'difficulty_level' => 'nullable|string|in:novice,beginner,intermediate,advanced',
                 'source' => 'nullable|string|in:manual,ai_generated',
                 'exercises' => 'nullable|array',
                 'exercises.*.exercise_id' => 'nullable|integer',
