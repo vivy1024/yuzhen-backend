@@ -302,7 +302,7 @@ class MCPToolsController extends BaseController
                "- 训练水平: {$params['training_level']}\n" .
                "- 目标: {$params['goal']}\n" .
                "- 可用器械: " . implode(', ', $params['equipment_access'] ?? []) . "\n" .
-               "- 训练频率: 每周{$params['training_frequency']}次\n" .
+               "- 训练频率: 每星期{$params['training_frequency']}次\n" .
                "- 单次时长: {$params['session_duration']}分钟\n" .
                (isset($params['injuries']) ? "- 伤病史: {$params['injuries']}\n" : "") .
                "\n请生成包含动作、组数、次数、休息时间的详细计划。";

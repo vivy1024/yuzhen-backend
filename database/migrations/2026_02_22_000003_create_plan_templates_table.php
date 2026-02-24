@@ -19,7 +19,7 @@ return new class extends Migration
             $table->enum('goal', ['lose_weight', 'gain_muscle', 'maintain', 'improve_fitness'])->comment('训练目标');
             $table->enum('level', ['novice', 'beginner', 'intermediate', 'advanced'])->comment('适合等级');
             $table->integer('duration_weeks')->default(4)->comment('周期(周)');
-            $table->integer('workouts_per_week')->default(3)->comment('每周训练次数');
+            $table->integer('workouts_per_week')->default(3)->comment('每星期训练次数');
             $table->json('exercises')->comment('动作列表JSON');
             $table->json('tags')->nullable()->comment('标签');
             $table->boolean('is_active')->default(true)->comment('是否启用');
