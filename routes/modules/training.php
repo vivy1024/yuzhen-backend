@@ -4,18 +4,22 @@ use Illuminate\Support\Facades\Route;
 use App\Modules\Training\Controllers\TrainingPlanController;
 
 /**
- * Training Module Routes
+ * @deprecated 2026-02-25 请使用 /api/training/plans/* 路由（training-plan.php）
  *
- * 训练模块路由
+ * Training Module Routes (DEPRECATED)
  *
- * 前缀: /api/training-plans (与前端一致)
+ * 旧版训练模块路由，前端已统一使用 /api/training/plans/* 路由。
+ * 保留此文件是因为可能有内部调用，但所有新开发应使用新路由。
  *
- * @updated 2025-11-01
- * @version 1.1.0
+ * 前缀: /api/training-plans
+ * 替代: /api/training/plans (routes/modules/training-plan.php)
+ *
+ * @updated 2026-02-25
+ * @version 1.1.1
  */
 
 // 训练计划路由组
-Route::prefix('training-plans')->middleware(['jwt.auth'])->group(function () {
+Route::prefix('training-plans')->middleware(['jwt.auth', 'deprecated:/api/training/plans/'])->group(function () {
 
     // 获取用户的训练计划列表
     Route::get('/', [TrainingPlanController::class, 'index']);
