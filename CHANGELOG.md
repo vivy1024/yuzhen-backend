@@ -5,6 +5,18 @@
 
 ---
 
+## #15 (fix) 后端数据一致性修复 — 响应格式+废弃路由+SSE心跳 — 2026-02-25
+
+对应产品版本：v1.5.0
+
+- ChatTopicController: 6处 response()->json() 统一为 $this->success()（show/update/messages/storeMessage×2/syncMessages）
+- routes/modules/training.php: @deprecated 注释 + DeprecatedRouteLogger 中间件记录旧路由调用
+- DeprecatedRouteLogger（新建）: 通用废弃路由日志中间件，支持参数化替代路由
+- Kernel.php: 注册 'deprecated' 中间件别名
+- AiProxyController: cURL 新增 CURLOPT_LOW_SPEED_LIMIT/TIME 实现5分钟无数据超时断开
+
+---
+
 ## #14 (feat) 前端 API 缺口修复 — 后端路由补全 — 2026-02-24
 
 对应产品版本：v1.4.0

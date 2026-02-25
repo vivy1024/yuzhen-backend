@@ -70,5 +70,6 @@ class Kernel extends HttpKernel
         'internal.jwt.forward' => \App\Infrastructure\Http\Middleware\InternalJwtForward::class, // ✅ Internal JWT转发中间件（Requirements 2.1, 7.3）
         'jwt.auth' => \App\Modules\Auth\Middleware\JwtAuthenticate::class, // ✅ JWT认证中间件
         'admin' => \App\Http\Middleware\AdminMiddleware::class, // ✅ 管理员中间件
+        'deprecated' => \App\Http\Middleware\DeprecatedRouteLogger::class, // ✅ 废弃路由日志
     ];
 }
