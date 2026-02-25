@@ -5,6 +5,7 @@ namespace App\Modules\Progress\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
+use App\Services\Calculator\FFMICalculator;
 
 /**
  * Progress Record Model
@@ -59,24 +60,13 @@ class ProgressRecord extends Model
     }
 
     /**
-     * 计算FFMI
-     * FFMI = 瘦体重(kg) / 身高(m)^2
-     * 
-     * @param float $weight 体重(kg)
-     * @param float $bodyFat 体脂率(%)
-     * @param float $height 身高(cm)
-     * @return array ['ffmi' => float, 'lean_body_mass' => float]
+     * 计算FFMI（委托给 FFMICalculator）
+     *
+     * @deprecated 使用 FFMICalculator::calculateSimple() 代替
      */
     public static function calculateFFMI(float $weight, float $bodyFat, float $height): array
     {
-        $heightM = $height / 100;
-        $leanBodyMass = $weight * (1 - $bodyFat / 100);
-        $ffmi = $leanBodyMass / ($heightM * $heightM);
-        
-        return [
-            'ffmi' => round($ffmi, 2),
-            'lean_body_mass' => round($leanBodyMass, 2),
-        ];
+        return FFMICalculator::calculateSimple($weight, $bodyFat, $height);
     }
 
     /**
@@ -87,14 +77,12 @@ class ProgressRecord extends Model
         parent::boot();
 
         static::saving(function ($record) {
-            // 如果有体脂率，尝试计算FFMI
             if ($record->body_fat && $record->weight) {
-                // 需要从用户档案获取身高
                 $user = $record->user;
                 if ($user && $user->userProfile) {
                     $height = $user->userProfile->height;
                     if ($height) {
-                        $result = self::calculateFFMI($record->weight, $record->body_fat, $height);
+                        $result = FFMICalculator::calculateSimple($record->weight, $record->body_fat, $height);
                         $record->ffmi = $result['ffmi'];
                         $record->lean_body_mass = $result['lean_body_mass'];
                     }

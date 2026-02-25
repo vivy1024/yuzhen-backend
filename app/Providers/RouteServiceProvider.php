@@ -34,6 +34,11 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($request->ip());
         });
 
+        // 计算器API限流：每分钟30次/IP（纯计算无DB写入，适度宽松）
+        RateLimiter::for('calculators', function (Request $request) {
+            return Limit::perMinute(30)->by($request->ip());
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')
