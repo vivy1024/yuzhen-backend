@@ -26,6 +26,11 @@ class AiChatRequest extends FormRequest
             'session_id'  => ['sometimes', 'nullable', 'string', 'max:128'],
             'topic_id'    => ['sometimes', 'nullable', 'integer', 'min:1'],
             'tool_results'=> ['sometimes', 'nullable', 'array'],
+            'domain'       => ['sometimes', 'string', 'in:fitness,nutrition,health'],
+            'template_id'  => ['sometimes', 'nullable', 'string', 'max:128'],
+            'persona_id'   => ['sometimes', 'nullable', 'string', 'max:128'],
+            'attachments'  => ['sometimes', 'nullable', 'array', 'max:5'],
+            'attachments.*'=> ['string', 'max:10240'],
         ];
     }
 

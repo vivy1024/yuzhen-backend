@@ -5,6 +5,15 @@
 
 ---
 
+## #17 (fix) AI对话请求验证补全 — AiChatRequest 添加缺失字段 — 2026-02-26
+
+对应产品版本：v1.5.0
+
+- AiChatRequest.php: 添加 domain/template_id/persona_id/attachments 验证规则
+- 修复前端发送的这4个字段被 Laravel FormRequest 静默丢弃的问题
+
+---
+
 ## #16 (feat) 计算器卡片 — 7个PHP Calculator Service + API端点 + 单元测试 — 2026-02-25
 
 对应产品版本：v1.5.0
