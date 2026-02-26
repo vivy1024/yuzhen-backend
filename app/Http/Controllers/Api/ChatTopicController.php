@@ -363,10 +363,7 @@ class ChatTopicController extends BaseController
             $topic = ChatTopic::where('user_id', $user->id)
                 ->findOrFail($id);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => [
+            return $this->success([
                     'id' => (string) $topic->id,
                     'name' => $topic->name,
                     'description' => $topic->description,
@@ -375,8 +372,7 @@ class ChatTopicController extends BaseController
                     'messageCount' => $topic->message_count,
                     'lastMessage' => $topic->last_message,
                     'lastMessageAt' => $topic->last_message_at?->toIso8601String(),
-                ]
-            ]);
+            ], '获取成功');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->fail('话题不存在', 404);
         } catch (\Exception $e) {
@@ -411,16 +407,12 @@ class ChatTopicController extends BaseController
                 'user_id' => $user->id,
             ]);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '更新成功',
-                'data' => [
+            return $this->success([
                     'id' => (string) $topic->id,
                     'name' => $topic->name,
                     'description' => $topic->description,
                     'updatedAt' => $topic->updated_at->toIso8601String(),
-                ]
-            ]);
+            ], '更新成功');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->fail('话题不存在', 404);
         } catch (\Exception $e) {
@@ -486,10 +478,7 @@ class ChatTopicController extends BaseController
                 ->orderBy('created_at', 'asc')
                 ->get();
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '获取成功',
-                'data' => $messages->map(function ($msg) {
+            return $this->success($messages->map(function ($msg) {
                     return [
                         'id' => (string) $msg->id,
                         'topicId' => (string) $msg->topic_id,
@@ -499,8 +488,7 @@ class ChatTopicController extends BaseController
                         'toolCalls' => $msg->metadata['tool_calls'] ?? null,
                         'trainingPlan' => $msg->metadata['training_plan'] ?? null,
                     ];
-                })
-            ]);
+            }), '获取成功');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->fail('话题不存在', 404);
         } catch (\Exception $e) {
@@ -537,17 +525,13 @@ class ChatTopicController extends BaseController
             if (!empty($validated['client_id'])) {
                 $existing = \App\Models\ChatMessage::where('client_id', $validated['client_id'])->first();
                 if ($existing) {
-                    return response()->json([
-                        'code' => 200,
-                        'msg' => '消息已存在',
-                        'data' => [
+                    return $this->success([
                             'id' => (string) $existing->id,
                             'topicId' => (string) $existing->topic_id,
                             'role' => $existing->role,
                             'content' => $existing->content,
                             'timestamp' => $existing->created_at->timestamp * 1000,
-                        ]
-                    ]);
+                    ], '消息已存在');
                 }
             }
             
@@ -567,17 +551,13 @@ class ChatTopicController extends BaseController
                 'last_message_at' => now(),
             ]);
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '保存成功',
-                'data' => [
+            return $this->success([
                     'id' => (string) $message->id,
                     'topicId' => (string) $message->topic_id,
                     'role' => $message->role,
                     'content' => $message->content,
                     'timestamp' => $message->created_at->timestamp * 1000,
-                ]
-            ]);
+            ], '保存成功');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->fail('话题不存在', 404);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -644,16 +624,12 @@ class ChatTopicController extends BaseController
                 ]);
             }
             
-            return response()->json([
-                'code' => 200,
-                'msg' => '同步完成',
-                'data' => [
+            return $this->success([
                     'synced' => $synced,
                     'skipped' => $skipped,
                     'synced_count' => count($synced),
                     'skipped_count' => count($skipped),
-                ]
-            ]);
+            ], '同步完成');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->fail('话题不存在', 404);
         } catch (\Exception $e) {

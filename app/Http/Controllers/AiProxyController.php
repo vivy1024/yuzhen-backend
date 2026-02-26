@@ -82,6 +82,7 @@ class AiProxyController extends BaseController
                     CURLOPT_HTTPHEADER => $headers,
                     CURLOPT_RETURNTRANSFER => false,
                     CURLOPT_WRITEFUNCTION => function ($ch, $chunk) {
+                        // 透传所有数据（包括心跳 `: ` 和完成标记 [DONE]）
                         echo $chunk;
                         if (ob_get_level() > 0) {
                             ob_flush();
@@ -89,8 +90,10 @@ class AiProxyController extends BaseController
                         flush();
                         return strlen($chunk);
                     },
-                    CURLOPT_TIMEOUT => 300, // 5分钟超时
+                    CURLOPT_TIMEOUT => 600, // 10分钟总超时（长对话可能需要更多时间）
                     CURLOPT_CONNECTTIMEOUT => 30,
+                    CURLOPT_LOW_SPEED_LIMIT => 1, // 最低速度：1字节/秒
+                    CURLOPT_LOW_SPEED_TIME => 300, // 5分钟无数据则断开
                 ]);
                 
                 $result = curl_exec($ch);

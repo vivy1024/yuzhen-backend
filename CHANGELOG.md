@@ -5,6 +5,46 @@
 
 ---
 
+## #17 (fix) AI对话请求验证补全 — AiChatRequest 添加缺失字段 — 2026-02-26
+
+对应产品版本：v1.5.0
+
+- AiChatRequest.php: 添加 domain/template_id/persona_id/attachments 验证规则
+- 修复前端发送的这4个字段被 Laravel FormRequest 静默丢弃的问题
+
+---
+
+## #16 (feat) 计算器卡片 — 7个PHP Calculator Service + API端点 + 单元测试 — 2026-02-25
+
+对应产品版本：v1.5.0
+
+- 新增7个纯静态Calculator Service（`app/Services/Calculator/`）：
+  - TDEECalculator: Mifflin-St Jeor BMR + 活动系数 + 目标热量调整 + 三大营养素分配
+  - FFMICalculator: BMI(中国标准) + FFMI + 标准化FFMI + 评级 + 自然潜力评估
+  - OneRMCalculator: Epley + Brzycki 公式，支持批量计算
+  - IntensityConverter: RPE ↔ RIR ↔ %1RM 三向转换
+  - WeightRecommender: 基于1RM + 训练目标 + RPE → 推荐重量(2.5kg取整)
+  - CarbCyclingCalculator: 高/中/低碳日分配，蛋白质恒定，脂肪补齐
+  - MacroCalculator: balanced/body_weight/ratio 三种方法分配宏量营养素
+- 新增 CalculatorController（7个POST端点）+ `Route::prefix('calculators')` 路由组
+- 新增 rate limiting: 计算器端点 60次/分钟/IP
+- ProgressRecord.calculateFFMI() 迁移为调用 FFMICalculator::calculate()
+- 新增45个PHP单元测试（`tests/Unit/Services/Calculator/`），111个断言全部通过
+
+---
+
+## #15 (fix) 后端数据一致性修复 — 响应格式+废弃路由+SSE心跳 — 2026-02-25
+
+对应产品版本：v1.5.0
+
+- ChatTopicController: 6处 response()->json() 统一为 $this->success()（show/update/messages/storeMessage×2/syncMessages）
+- routes/modules/training.php: @deprecated 注释 + DeprecatedRouteLogger 中间件记录旧路由调用
+- DeprecatedRouteLogger（新建）: 通用废弃路由日志中间件，支持参数化替代路由
+- Kernel.php: 注册 'deprecated' 中间件别名
+- AiProxyController: cURL 新增 CURLOPT_LOW_SPEED_LIMIT/TIME 实现5分钟无数据超时断开
+
+---
+
 ## #14 (feat) 前端 API 缺口修复 — 后端路由补全 — 2026-02-24
 
 对应产品版本：v1.4.0
