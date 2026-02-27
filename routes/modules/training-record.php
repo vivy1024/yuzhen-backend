@@ -12,21 +12,21 @@ use App\Http\Controllers\Api\TrainingRecordController;
  * @date 2025-12-19
  */
 
-Route::prefix('training')->group(function () {
-    
+Route::prefix('training')->middleware('jwt.auth')->group(function () {
+
     // 记录训练数据
     Route::post('/record', [TrainingRecordController::class, 'recordTraining']);
-    
+
     // 批量记录训练数据
     Route::post('/record-batch', [TrainingRecordController::class, 'recordTrainingBatch']);
-    
+
     // 获取力量进步曲线（所有动作）
-    Route::get('/progress/{user_id}', [TrainingRecordController::class, 'getStrengthProgress']);
-    
+    Route::get('/progress', [TrainingRecordController::class, 'getStrengthProgress']);
+
     // 获取力量进步曲线（特定动作）
-    Route::get('/progress/{user_id}/{exercise_name}', [TrainingRecordController::class, 'getStrengthProgress']);
-    
+    Route::get('/progress/{exercise_name}', [TrainingRecordController::class, 'getStrengthProgress']);
+
     // 删除训练记录
-    Route::delete('/record/{user_id}/{exercise_name}/{index}', [TrainingRecordController::class, 'deleteTrainingRecord']);
-    
+    Route::delete('/record/{exercise_name}/{index}', [TrainingRecordController::class, 'deleteTrainingRecord']);
+
 });

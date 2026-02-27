@@ -19,7 +19,7 @@ class UserPlanRequest extends FormRequest
         $rules = [
             'name' => 'required|string|max:100',
             'description' => 'nullable|string|max:500',
-            'goal' => 'nullable|in:lose_weight,gain_muscle,maintain,improve_fitness',
+            'goal' => 'nullable|in:hypertrophy,fat_loss,strength,endurance,body_shaping,general_fitness,functional,rehabilitation,lose_weight,gain_muscle,maintain,improve_fitness',
             'difficulty' => 'nullable|in:novice,beginner,intermediate,advanced',
             'duration_weeks' => 'required|integer|min:1|max:52',
             'workouts_per_week' => 'required|integer|min:1|max:7',

@@ -108,6 +108,20 @@ class TrainingLogController extends BaseController
                 return $this->fail('用户未认证', 401);
             }
 
+            // 兼容前端 exercises 格式：自动转换为 planned_exercises + actual_exercises
+            if ($request->has('exercises') && !$request->has('planned_exercises')) {
+                $exercises = $request->input('exercises');
+                $request->merge([
+                    'planned_exercises' => collect($exercises)->map(fn($e) => [
+                        'exercise_id' => $e['exercise_id'] ?? null,
+                        'exercise_name' => $e['name'] ?? $e['exercise_name'] ?? '',
+                        'sets' => is_array($e['sets'] ?? null) ? count($e['sets']) : ($e['sets'] ?? 3),
+                        'reps' => is_array($e['sets'] ?? null) ? ($e['sets'][0]['reps'] ?? 10) : 10,
+                    ])->toArray(),
+                    'actual_exercises' => $exercises,
+                ]);
+            }
+
             // 验证请求数据
             $validator = Validator::make($request->all(), [
                 'session_date' => 'required|date',
@@ -504,9 +518,17 @@ class TrainingLogController extends BaseController
             $plan = \App\Modules\Training\Models\TrainingPlan::where('user_id', $user->id)
                 ->findOrFail($data['plan_id']);
 
-            // 获取计划的动作列表
+            // 获取计划的动作列表（优先从 planExercises 关联获取）
             $exercises = [];
-            if (is_array($plan->exercises) && !empty($plan->exercises)) {
+            if ($plan->planExercises && $plan->planExercises->count() > 0) {
+                $exercises = $plan->planExercises->map(fn($e) => [
+                    'exercise_id' => (string) $e->exercise_id,
+                    'exercise_name' => $e->exercise_name,
+                    'sets' => $e->sets,
+                    'reps' => $e->reps,
+                    'weight' => $e->weight,
+                ])->toArray();
+            } elseif (is_array($plan->exercises) && !empty($plan->exercises)) {
                 $exercises = $plan->exercises;
             }
 

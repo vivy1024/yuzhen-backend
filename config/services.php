@@ -36,4 +36,8 @@ return [
         'private_key' => env('VAPID_PRIVATE_KEY'),
     ],
 
+    'daml_rag' => [
+        'url' => env('DAML_RAG_URL', 'http://fitness_daml_rag:8001'),
+    ],
+
 ];
