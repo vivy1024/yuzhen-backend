@@ -5,6 +5,18 @@
 
 ---
 
+## #19 (fix) 认证系统审计修复 — 2026-02-28
+
+对应产品版本：v1.6.1
+
+- EmailService::login(): 修复不存在的 generateTokens() 调用（REQ-C1）
+- EmailService::login(): 添加用户禁用状态检查（REQ-H4）
+- AuthService::logout(): JWT黑名单机制替代Sanctum方式（REQ-C3）
+- AuthService::login(): 登录失败添加审计日志（REQ-H7）
+- JwtAuthenticate中间件: 添加JWT黑名单检查（REQ-C3）
+- SmsService::loginWithSms(): 添加UserLoggedIn事件触发（REQ-H5）
+- auth.php路由: 登录接口添加throttle:5,1限流（REQ-H1）
+
 ## #18 (fix) DYPNS短信验证码发送修复 — 2026-02-27
 
 对应产品版本：v1.5.2
