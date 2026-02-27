@@ -40,4 +40,26 @@ return [
         'url' => env('DAML_RAG_URL', 'http://fitness_daml_rag:8001'),
     ],
 
+    'mco' => [
+        'url' => env('MCO_BASE_URL', 'http://localhost:8001'),
+    ],
+
+    'prometheus' => [
+        'url' => env('PROMETHEUS_URL', 'http://prometheus:9090'),
+    ],
+
+    'loki' => [
+        'url' => env('LOKI_URL', 'http://loki:3100'),
+    ],
+
+    'qdrant' => [
+        'url' => env('QDRANT_URL', 'http://qdrant:6333'),
+    ],
+
+    'neo4j' => [
+        'url' => env('NEO4J_URL', 'http://neo4j:7474'),
+        'username' => env('NEO4J_USERNAME', 'neo4j'),
+        'password' => env('NEO4J_PASSWORD', ''),
+    ],
+
 ];

@@ -30,8 +30,8 @@ class MetricsProxyController extends BaseController
     
     public function __construct()
     {
-        $this->prometheusUrl = env('PROMETHEUS_URL', 'http://prometheus:9090');
-        $this->damlRagUrl = env('DAML_RAG_URL', 'http://fitness_daml_rag:8001');
+        $this->prometheusUrl = config('services.prometheus.url', 'http://prometheus:9090');
+        $this->damlRagUrl = config('services.daml_rag.url', 'http://fitness_daml_rag:8001');
     }
     
     /**
@@ -468,7 +468,7 @@ class MetricsProxyController extends BaseController
         $end = $request->input('end');
         
         try {
-            $lokiUrl = env('LOKI_URL', 'http://loki:3100');
+            $lokiUrl = config('services.loki.url', 'http://loki:3100');
             
             $params = [
                 'query' => $query,
@@ -557,7 +557,7 @@ class MetricsProxyController extends BaseController
     public function lokiLabels()
     {
         try {
-            $lokiUrl = env('LOKI_URL', 'http://loki:3100');
+            $lokiUrl = config('services.loki.url', 'http://loki:3100');
             $response = Http::timeout(10)->get("{$lokiUrl}/loki/api/v1/labels");
             
             if ($response->successful()) {
