@@ -5,6 +5,23 @@
 
 ---
 
+## #21 (fix) P2 端点安全加固 + env() 清理 — 2026-02-28
+
+对应产品版本：v1.6.3
+
+**未认证端点加固**：
+- routes/modules/food.php: `/clear-cache` 添加 `jwt.auth` + `role:admin` 中间件
+- routes/modules/help.php: `/faqs/{id}/feedback` 添加 `throttle:5,1` 限流
+
+**env() 直接调用清理**：
+- MCPToolsController: `env('MCO_BASE_URL')` → `config('services.mco.url')`
+- MetricsProxyController: `env('PROMETHEUS_URL')` / `env('DAML_RAG_URL')` → `config('services.prometheus.url')` / `config('services.daml_rag.url')`
+- MetricsProxyController: `env('LOKI_URL')` ×2 → `config('services.loki.url')`
+- HealthCheckController::checkNeo4j(): `env('NEO4J_*')` fallback → `config('services.neo4j.*')`
+- config/services.php: 新增 `mco` / `prometheus` / `loki` / `qdrant` / `neo4j` 配置块
+
+---
+
 ## #20 (fix) 核心功能审计修复 — AI对话+训练计划 — 2026-02-28
 
 对应产品版本：v1.6.2
