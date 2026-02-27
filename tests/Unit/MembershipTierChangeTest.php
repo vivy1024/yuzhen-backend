@@ -14,10 +14,11 @@ use Spatie\Permission\PermissionRegistrar;
 
 /**
  * MembershipService::updateUserTier 单元测试
- * 
+ *
  * 验证会员等级变更时：
  * - 权限缓存立即清除（Requirements 4.5）
  * - 审计日志正确记录（Requirements 8.3）
+ * - 返回包含刷新标记（JWT权限实时性）
  */
 class MembershipTierChangeTest extends TestCase
 {
@@ -54,7 +55,7 @@ class MembershipTierChangeTest extends TestCase
 
         // 升级到energy
         $result = $this->service->updateUserTier($user->id, 'energy');
-        $this->assertTrue($result);
+        $this->assertTrue($result['success']);
 
         // 验证数据库中membership_tier已更新
         $this->assertDatabaseHas('users', [
@@ -75,6 +76,22 @@ class MembershipTierChangeTest extends TestCase
             'model_id' => $user->id,
             'role_id' => $freeRole->id,
         ]);
+    }
+
+    /**
+     * 测试等级变更返回刷新标记
+     * Validates: JWT权限实时性
+     */
+    public function test_tier_change_returns_refresh_flag(): void
+    {
+        $user = $this->createTestUser('free');
+
+        $result = $this->service->updateUserTier($user->id, 'energy');
+
+        $this->assertTrue($result['success']);
+        $this->assertEquals('free', $result['old_tier']);
+        $this->assertEquals('energy', $result['new_tier']);
+        $this->assertTrue($result['token_refresh_required']);
     }
 
     /**
@@ -134,7 +151,7 @@ class MembershipTierChangeTest extends TestCase
 
         $user = $this->createTestUser('free');
         $result = $this->service->updateUserTier($user->id, 'invalid');
-        $this->assertFalse($result);
+        $this->assertFalse($result['success']);
 
         Log::shouldNotHaveReceived('info', function ($message) {
             return $message === '[AUDIT] 会员等级变更';
@@ -149,7 +166,7 @@ class MembershipTierChangeTest extends TestCase
         Log::spy();
 
         $result = $this->service->updateUserTier(99999, 'energy');
-        $this->assertFalse($result);
+        $this->assertFalse($result['success']);
 
         Log::shouldNotHaveReceived('info', function ($message) {
             return $message === '[AUDIT] 会员等级变更';

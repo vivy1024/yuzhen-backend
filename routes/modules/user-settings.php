@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\UserSettingsController;
 use App\Http\Controllers\Api\AvatarController;
+use App\Modules\Auth\Controllers\PhoneBindingController;
 
 /**
  * User Settings Routes - 用户设置与账号安全
@@ -19,6 +20,15 @@ Route::middleware('jwt.auth')->group(function () {
     // 账号安全
     Route::post('/user/change-password', [UserSettingsController::class, 'changePassword']);
     Route::delete('/user/account', [UserSettingsController::class, 'deleteAccount']);
+
+    // 手机号绑定
+    Route::prefix('user/phone')->group(function () {
+        Route::get('/status', [PhoneBindingController::class, 'status']);
+        Route::post('/bind', [PhoneBindingController::class, 'bind']);
+        Route::post('/unbind', [PhoneBindingController::class, 'unbind']);
+        Route::post('/change', [PhoneBindingController::class, 'change']);
+        Route::post('/send-bind-code', [PhoneBindingController::class, 'sendBindCode']);
+    });
 
     // 版本信息
     Route::get('/version', [UserSettingsController::class, 'getVersion']);
