@@ -17,14 +17,13 @@ class TrainingRecord extends Model
     protected $table = 'training_records';
 
     protected $fillable = [
-        'training_session_id',
+        'session_id',
         'exercise_id',
         'set_number',
         'reps',
         'weight',
-        'duration',
-        'rest_time',
-        'difficulty_rating',
+        'rpe',
+        'rest_seconds',
         'notes',
     ];
 
@@ -32,9 +31,8 @@ class TrainingRecord extends Model
         'set_number' => 'integer',
         'reps' => 'integer',
         'weight' => 'float',
-        'duration' => 'integer',
-        'rest_time' => 'integer',
-        'difficulty_rating' => 'integer',
+        'rpe' => 'float',
+        'rest_seconds' => 'integer',
     ];
 
     /**

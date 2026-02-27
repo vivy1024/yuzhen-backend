@@ -5,6 +5,36 @@
 
 ---
 
+## #20 (fix) 核心功能审计修复 — AI对话+训练计划 — 2026-02-28
+
+对应产品版本：v1.6.2
+
+**P0 安全漏洞（4个）**：
+- training-record.php: 添加 jwt.auth 中间件，移除 URL 中 user_id 参数
+- TrainingRecordController: 所有方法从 JWT 获取 user_id（不再信任请求体）
+- routes/api.php: 注释旧版 Modules 训练路由（消除 IDOR 漏洞）
+- AiProxyController::warmupStatus(): 添加 user_id 归属校验（403）
+- ChatTopicController: client_id 去重查询限定 user_id 范围
+
+**P1 功能修复（6个）**：
+- AiProxyController: env() → config('services.daml_rag.url')（config:cache 兼容）
+- config/services.php: 新增 daml_rag.url 配置项
+- UserPlanRequest: goal 枚举扩展（新增 hypertrophy/fat_loss/strength 等8个值）
+- TrainingPlanController::import(): 字段名双向兼容 duration_weeks/weeks + workouts_per_week/frequency
+- TrainingLogController::recordSession(): 兼容前端 exercises 格式自动转换
+- TrainingLogController::createFromPlan(): 优先从 planExercises 关联获取动作
+
+**P2 功能缺陷（3个）**：
+- TrainingRecord 模型: fillable/casts 对齐数据库 schema（session_id/rpe/rest_seconds）
+- TrainingSession 模型: 状态值统一 in-progress → in_progress
+- ChatTopicController::syncMessages(): 添加 DB::transaction 事务保护
+
+**P3 性能优化（1个）**：
+- ChatTopicController::sessions(): N+1 查询优化（批量预加载首条 user_query）
+
+**测试更新**：
+- TrainingRecordTest: 适配 JWT 认证 + 新路由路径 + 新增 401 测试
+
 ## #19 (fix) 认证系统审计修复 — 2026-02-28
 
 对应产品版本：v1.6.1

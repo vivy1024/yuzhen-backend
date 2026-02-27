@@ -31,7 +31,6 @@ class TrainingRecordController extends BaseController
         try {
             // 验证请求数据
             $validator = Validator::make($request->all(), [
-                'user_id' => 'required|integer|exists:users,id',
                 'exercise_name' => 'required|string|max:100',
                 'weight' => 'required|numeric|min:0',
                 'reps' => 'required|integer|min:1|max:100',
@@ -42,8 +41,10 @@ class TrainingRecordController extends BaseController
                 return $this->fail('数据验证失败', 422, ['errors' => $validator->errors()]);
             }
 
+            $userId = $request->user()->id;
+
             // 获取用户档案
-            $userProfile = UserProfile::where('user_id', $request->user_id)->firstOrFail();
+            $userProfile = UserProfile::where('user_id', $userId)->firstOrFail();
 
             // 记录训练数据
             $progressData = $userProfile->recordStrengthProgress(
@@ -74,9 +75,11 @@ class TrainingRecordController extends BaseController
      * @param string|null $exerciseName
      * @return JsonResponse
      */
-    public function getStrengthProgress(int $userId, ?string $exerciseName = null): JsonResponse
+    public function getStrengthProgress(Request $request, ?string $exerciseName = null): JsonResponse
     {
         try {
+            $userId = $request->user()->id;
+
             // 获取用户档案
             $userProfile = UserProfile::where('user_id', $userId)->firstOrFail();
 
@@ -123,7 +126,6 @@ class TrainingRecordController extends BaseController
         try {
             // 验证请求数据
             $validator = Validator::make($request->all(), [
-                'user_id' => 'required|integer|exists:users,id',
                 'records' => 'required|array|min:1',
                 'records.*.exercise_name' => 'required|string|max:100',
                 'records.*.weight' => 'required|numeric|min:0',
@@ -135,8 +137,10 @@ class TrainingRecordController extends BaseController
                 return $this->fail('数据验证失败', 422, ['errors' => $validator->errors()]);
             }
 
+            $userId = $request->user()->id;
+
             // 获取用户档案
-            $userProfile = UserProfile::where('user_id', $request->user_id)->firstOrFail();
+            $userProfile = UserProfile::where('user_id', $userId)->firstOrFail();
 
             $results = [];
 
@@ -175,9 +179,11 @@ class TrainingRecordController extends BaseController
      * @param int $index
      * @return JsonResponse
      */
-    public function deleteTrainingRecord(int $userId, string $exerciseName, int $index): JsonResponse
+    public function deleteTrainingRecord(Request $request, string $exerciseName, int $index): JsonResponse
     {
         try {
+            $userId = $request->user()->id;
+
             // 获取用户档案
             $userProfile = UserProfile::where('user_id', $userId)->firstOrFail();
 

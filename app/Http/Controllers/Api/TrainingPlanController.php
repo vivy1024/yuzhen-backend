@@ -81,27 +81,29 @@ class TrainingPlanController extends BaseController
             $validated = $request->validate([
                 'name' => 'required|string|max:100',
                 'description' => 'nullable|string',
-                'weeks' => 'required|integer|min:1|max:52',
-                'frequency' => 'required|integer|min:1|max:7',
+                'duration_weeks' => 'required_without:weeks|integer|min:1|max:52',
+                'weeks' => 'required_without:duration_weeks|integer|min:1|max:52',
+                'workouts_per_week' => 'required_without:frequency|integer|min:1|max:7',
+                'frequency' => 'required_without:workouts_per_week|integer|min:1|max:7',
                 'exercises' => 'required|array',
                 'target_muscles' => 'nullable|array',
                 'safety_notes' => 'nullable|array',
                 'difficulty' => 'nullable|in:beginner,intermediate,advanced',
                 'chat_session_id' => 'nullable|integer|exists:chat_sessions,id',
             ]);
-            
+
             $user = $request->user();
-            
+
             DB::beginTransaction();
-            
+
             try {
                 $plan = TrainingPlan::create([
                     'user_id' => $user->id,
                     'chat_session_id' => $validated['chat_session_id'] ?? null,
                     'name' => $validated['name'],
                     'description' => $validated['description'] ?? null,
-                    'duration_weeks' => $validated['weeks'],
-                    'workouts_per_week' => $validated['frequency'],
+                    'duration_weeks' => $validated['duration_weeks'] ?? $validated['weeks'],
+                    'workouts_per_week' => $validated['workouts_per_week'] ?? $validated['frequency'],
                     'exercises' => $validated['exercises'],
                     'target_muscles' => $validated['target_muscles'] ?? null,
                     'safety_notes' => $validated['safety_notes'] ?? null,

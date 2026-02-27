@@ -139,20 +139,28 @@ class ChatTopicController extends BaseController
                 ->groupBy('session_id')
                 ->get()
                 ->keyBy('session_id');
-            
+
+            // 批量获取每个会话的首条 user_query（消除 N+1）
+            $firstIds = ChatSession::where('user_id', $user->id)
+                ->whereIn('session_id', $sessionGroups->pluck('session_id'))
+                ->select('session_id', DB::raw('MIN(id) as first_id'))
+                ->groupBy('session_id')
+                ->get()
+                ->keyBy('session_id');
+            $firstQueries = ChatSession::whereIn('id', $firstIds->pluck('first_id'))
+                ->pluck('user_query', 'session_id');
+
             // 格式化返回数据
-            $sessions = $sessionGroups->map(function ($group) use ($latestSessions, $messageCounts) {
+            $sessions = $sessionGroups->map(function ($group) use ($latestSessions, $messageCounts, $firstQueries) {
                 $session = $latestSessions->get($group->session_id);
                 $count = $messageCounts->get($group->session_id);
-                
+
                 if (!$session) {
                     return null;
                 }
-                
+
                 // 生成会话标题（取第一条用户问题的前50个字符）
-                $firstQuery = ChatSession::where('session_id', $group->session_id)
-                    ->orderBy('created_at', 'asc')
-                    ->value('user_query');
+                $firstQuery = $firstQueries->get($group->session_id);
                 $title = $firstQuery ? mb_substr($firstQuery, 0, 50) : '新对话';
                 
                 return [
@@ -523,7 +531,9 @@ class ChatTopicController extends BaseController
             
             // 检查client_id是否已存在（去重）
             if (!empty($validated['client_id'])) {
-                $existing = \App\Models\ChatMessage::where('client_id', $validated['client_id'])->first();
+                $existing = \App\Models\ChatMessage::where('client_id', $validated['client_id'])
+                    ->where('user_id', $user->id)
+                    ->first();
                 if ($existing) {
                     return $this->success([
                             'id' => (string) $existing->id,
@@ -590,38 +600,48 @@ class ChatTopicController extends BaseController
             
             $synced = [];
             $skipped = [];
-            
-            foreach ($validated['messages'] as $msgData) {
-                // 检查是否已存在
-                $existing = \App\Models\ChatMessage::where('client_id', $msgData['client_id'])->first();
-                if ($existing) {
-                    $skipped[] = $msgData['client_id'];
-                    continue;
+
+            DB::beginTransaction();
+            try {
+                foreach ($validated['messages'] as $msgData) {
+                    // 检查是否已存在
+                    $existing = \App\Models\ChatMessage::where('client_id', $msgData['client_id'])
+                        ->where('user_id', $user->id)
+                        ->first();
+                    if ($existing) {
+                        $skipped[] = $msgData['client_id'];
+                        continue;
+                    }
+
+                    $message = \App\Models\ChatMessage::create([
+                        'topic_id' => $id,
+                        'user_id' => $user->id,
+                        'role' => $msgData['role'],
+                        'content' => $msgData['content'],
+                        'client_id' => $msgData['client_id'],
+                        'metadata' => $msgData['metadata'] ?? null,
+                    ]);
+
+                    $synced[] = [
+                        'client_id' => $msgData['client_id'],
+                        'server_id' => (string) $message->id,
+                    ];
                 }
-                
-                $message = \App\Models\ChatMessage::create([
-                    'topic_id' => $id,
-                    'user_id' => $user->id,
-                    'role' => $msgData['role'],
-                    'content' => $msgData['content'],
-                    'client_id' => $msgData['client_id'],
-                    'metadata' => $msgData['metadata'] ?? null,
-                ]);
-                
-                $synced[] = [
-                    'client_id' => $msgData['client_id'],
-                    'server_id' => (string) $message->id,
-                ];
-            }
-            
-            // 更新话题统计
-            if (count($synced) > 0) {
-                $topic->increment('message_count', count($synced));
-                $lastMsg = end($validated['messages']);
-                $topic->update([
-                    'last_message' => mb_substr($lastMsg['content'], 0, 50),
-                    'last_message_at' => now(),
-                ]);
+
+                // 更新话题统计
+                if (count($synced) > 0) {
+                    $topic->increment('message_count', count($synced));
+                    $lastMsg = end($validated['messages']);
+                    $topic->update([
+                        'last_message' => mb_substr($lastMsg['content'], 0, 50),
+                        'last_message_at' => now(),
+                    ]);
+                }
+
+                DB::commit();
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
             }
             
             return $this->success([

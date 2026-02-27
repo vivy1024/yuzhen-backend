@@ -27,7 +27,7 @@ class AiProxyController extends BaseController
     
     public function __construct()
     {
-        $this->damlRagUrl = env('DAML_RAG_URL', 'http://fitness_daml_rag:8001');
+        $this->damlRagUrl = config('services.daml_rag.url', 'http://fitness_daml_rag:8001');
     }
     
     /**
@@ -245,6 +245,11 @@ class AiProxyController extends BaseController
      */
     public function warmupStatus(Request $request, string $userId)
     {
+        // 验证只能查询自己的预热状态
+        if ((string) $request->user()->id !== $userId) {
+            return $this->fail('无权查看其他用户的预热状态', 403);
+        }
+
         try {
             $httpRequest = Http::timeout(10);
 
