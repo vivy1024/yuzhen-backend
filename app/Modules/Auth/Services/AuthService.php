@@ -167,9 +167,9 @@ class AuthService
      */
     private function findUserByIdentifier(string $identifier): ?User
     {
-        return User::where('name', $identifier)  // ✅ 修改: username -> name
+        return User::where('name', $identifier)
             ->orWhere('email', $identifier)
-            // ->orWhere('phone', $identifier)  // ⚠️ 暂时注释：Docker数据库phone字段有缓存问题
+            ->orWhere('phone', $identifier)  // ✅ 已恢复：手机号唯一约束已添加
             ->first();
     }
 }

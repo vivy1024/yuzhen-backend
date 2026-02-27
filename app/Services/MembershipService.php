@@ -359,39 +359,45 @@ class MembershipService
 
     /**
      * 更新用户会员等级
-     * 
+     *
      * @param int $userId 用户ID
      * @param string $tier 新的会员等级
-     * @return bool
+     * @return array 包含操作结果和刷新标记
      */
-    public function updateUserTier(int $userId, string $tier): bool
+    public function updateUserTier(int $userId, string $tier): array
     {
         if (!in_array($tier, [self::TIER_FREE, self::TIER_WARMHEART, self::TIER_ENERGY])) {
             Log::warning('尝试设置无效的会员等级', [
                 'user_id' => $userId,
                 'tier' => $tier,
             ]);
-            return false;
+            return [
+                'success' => false,
+                'error' => '无效的会员等级',
+            ];
         }
-        
+
         $user = User::find($userId);
-        
+
         if (!$user) {
-            return false;
+            return [
+                'success' => false,
+                'error' => '用户不存在',
+            ];
         }
-        
+
         $oldTier = $user->membership_tier;
         $user->membership_tier = $tier;
         $result = $user->save();
-        
+
         if ($result) {
             // 同步Spatie角色权限
             app(PermissionService::class)->syncPermissionsForTier($user, $tier);
-            
-            // 立即清除该用户的权限缓存，确保配额配置即时生效（Requirements 4.5）
+
+            // 立即清除该用户的权限缓存，确保配额配置即时生效
             app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
-            
-            // 审计日志：记录会员等级变更（Requirements 8.3）
+
+            // 审计日志：记录会员等级变更
             Log::info('[AUDIT] 会员等级变更', [
                 'audit_type' => 'membership_tier_change',
                 'user_id' => $userId,
@@ -399,15 +405,25 @@ class MembershipService
                 'new_tier' => $tier,
                 'changed_at' => now()->toIso8601String(),
             ]);
-            
+
             Log::info('用户会员等级已更新', [
                 'user_id' => $userId,
                 'old_tier' => $oldTier,
                 'new_tier' => $tier,
             ]);
+
+            return [
+                'success' => true,
+                'old_tier' => $oldTier,
+                'new_tier' => $tier,
+                'token_refresh_required' => true,  // 权限变更，需要刷新Token
+            ];
         }
-        
-        return $result;
+
+        return [
+            'success' => false,
+            'error' => '保存失败',
+        ];
     }
 
     /**
