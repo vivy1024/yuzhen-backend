@@ -29,6 +29,9 @@ class ApiResponseComplianceTest extends TestCase
     {
         parent::setUp();
 
+        // 清除限流缓存，避免测试间互相影响
+        Cache::flush();
+
         // 创建测试用户
         $this->testUser = User::create([
             'name' => 'Test User',
