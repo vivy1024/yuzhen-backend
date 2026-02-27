@@ -45,7 +45,7 @@
 ```json
 {
   "code": 0,
-  "message": "获取成功",
+  "msg": "获取成功",
   "data": {
     "total": 50,
     "limit": 20,
@@ -98,7 +98,7 @@
 ```json
 {
   "code": 0,
-  "message": "获取成功",
+  "msg": "获取成功",
   "data": {
     "total": 10,
     "limit": 20,
@@ -147,7 +147,7 @@
 ```json
 {
   "code": 0,
-  "message": "获取成功",
+  "msg": "获取成功",
   "data": {
     "sessionId": "uuid-xxx",
     "topicId": "1",
@@ -202,7 +202,7 @@
 ```json
 {
   "code": 0,
-  "message": "删除成功",
+  "msg": "删除成功",
   "data": {
     "sessionId": "uuid-xxx",
     "deletedCount": 5
@@ -231,7 +231,7 @@
 ```json
 {
   "code": 0,
-  "message": "获取成功",
+  "msg": "获取成功",
   "data": [
     {
       "id": "1",
@@ -282,7 +282,7 @@
 ```json
 {
   "code": 0,
-  "message": "创建成功",
+  "msg": "创建成功",
   "data": {
     "id": "1",
     "name": "训练计划讨论",
@@ -320,7 +320,7 @@
 ```json
 {
   "code": 0,
-  "message": "获取成功",
+  "msg": "获取成功",
   "data": {
     "id": "1",
     "name": "训练计划讨论",
@@ -377,7 +377,7 @@
 ```json
 {
   "code": 0,
-  "message": "更新成功",
+  "msg": "更新成功",
   "data": {
     "id": "1",
     "name": "训练计划讨论（已更新）",
@@ -415,7 +415,7 @@
 ```json
 {
   "code": 0,
-  "message": "删除成功",
+  "msg": "删除成功",
   "data": null
 }
 ```
@@ -447,7 +447,7 @@
 ```json
 {
   "code": 0,
-  "message": "获取成功",
+  "msg": "获取成功",
   "data": [
     {
       "id": "1",
@@ -526,7 +526,7 @@
 ```json
 {
   "code": 0,
-  "message": "保存成功",
+  "msg": "保存成功",
   "data": {
     "id": "1",
     "topicId": "1",
@@ -599,7 +599,7 @@
 ```json
 {
   "code": 0,
-  "message": "同步完成",
+  "msg": "同步完成",
   "data": {
     "synced": [
       {

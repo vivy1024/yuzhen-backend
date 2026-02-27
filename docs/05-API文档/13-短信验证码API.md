@@ -159,8 +159,8 @@ return [
 **成功响应** (200):
 ```json
 {
-  "success": true,
-  "message": "验证码已发送",
+  "code": 200,
+  "msg": "验证码已发送",
   "data": {
     "expires_at": 1704182400,
     "wait_seconds": 60
@@ -197,8 +197,8 @@ return [
 **成功响应** (200):
 ```json
 {
-  "success": true,
-  "message": "验证成功",
+  "code": 200,
+  "msg": "验证成功",
   "data": {
     "verified": true
   }
@@ -232,8 +232,8 @@ return [
 **成功响应** (200):
 ```json
 {
-  "success": true,
-  "message": "登录成功",
+  "code": 200,
+  "msg": "登录成功",
   "data": {
     "user": {
       "id": 1,
@@ -267,7 +267,7 @@ return [
 **成功响应** (200):
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "phone": "13800138000",
     "is_registered": true

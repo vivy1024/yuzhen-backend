@@ -33,14 +33,14 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "theme": "system",
     "language": "zh-CN",
     "notification_enabled": true,
     "reminder_time": "08:00"
   },
-  "message": "获取设置成功"
+  "msg": "获取设置成功"
 }
 ```
 
@@ -68,14 +68,14 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "theme": "dark",
     "language": "zh-CN",
     "notification_enabled": false,
     "reminder_time": "09:00"
   },
-  "message": "设置更新成功"
+  "msg": "设置更新成功"
 }
 ```
 
@@ -103,9 +103,9 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": null,
-  "message": "密码修改成功"
+  "msg": "密码修改成功"
 }
 ```
 
@@ -133,9 +133,9 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": null,
-  "message": "账号已注销"
+  "msg": "账号已注销"
 }
 ```
 
@@ -158,14 +158,14 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "has_phone": true,
     "phone": "138****8000",
     "phone_verified": true,
     "phone_bound_at": "2026-02-28T10:00:00"
   },
-  "message": "获取状态成功"
+  "msg": "获取状态成功"
 }
 ```
 
@@ -191,12 +191,12 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "phone": "138****8000",
     "phone_verified": true
   },
-  "message": "手机号绑定成功"
+  "msg": "手机号绑定成功"
 }
 ```
 
@@ -226,9 +226,9 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": null,
-  "message": "手机号已解绑"
+  "msg": "手机号已解绑"
 }
 ```
 
@@ -259,11 +259,11 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "phone": "138****8001"
   },
-  "message": "手机号更换成功"
+  "msg": "手机号更换成功"
 }
 ```
 
@@ -294,11 +294,11 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "expires_at": "2026-02-28T10:10:00Z"
   },
-  "message": "验证码已发送"
+  "msg": "验证码已发送"
 }
 ```
 
@@ -321,12 +321,12 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "version": "1.6.3",
     "api_version": "2.0.0"
   },
-  "message": "获取版本信息成功"
+  "msg": "获取版本信息成功"
 }
 ```
 
@@ -351,11 +351,11 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "avatar_url": "/storage/avatars/1.jpg"
   },
-  "message": "头像上传成功"
+  "msg": "头像上传成功"
 }
 ```
 
