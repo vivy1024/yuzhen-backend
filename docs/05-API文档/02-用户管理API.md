@@ -34,7 +34,8 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
+  "msg": "获取用户信息成功",
   "data": {
     "id": 1,
     "name": "用户昵称",
@@ -71,8 +72,7 @@
       "tier": "energy",
       "name": "能量会员"
     }
-  },
-  "message": "获取用户信息成功"
+  }
 }
 ```
 
@@ -94,7 +94,8 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
+  "msg": "获取用户档案成功",
   "data": {
     "id": 1,
     "user_id": 1,
@@ -146,8 +147,7 @@
     "version": 1,
     "created_at": "2026-02-28T10:00:00Z",
     "updated_at": "2026-02-28T10:00:00Z"
-  },
-  "message": "获取用户档案成功"
+  }
 }
 ```
 
@@ -200,7 +200,7 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "id": 1,
     "user_id": 1,
@@ -221,7 +221,7 @@
     "version": 2,
     "updated_at": "2026-02-28T10:05:00Z"
   },
-  "message": "更新档案成功"
+  "msg": "更新档案成功"
 }
 ```
 
@@ -244,7 +244,7 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "total_training_sessions": 45,
     "total_training_hours": 67.5,
@@ -260,7 +260,7 @@
       "deadlift": 180
     }
   },
-  "message": "获取统计信息成功"
+  "msg": "获取统计信息成功"
 }
 ```
 
@@ -285,7 +285,7 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": [
     {
       "id": 1,
@@ -314,7 +314,7 @@
       "recorded_at": "2026-02-27T10:00:00Z"
     }
   ],
-  "message": "获取FFMI历史成功"
+  "msg": "获取FFMI历史成功"
 }
 ```
 
@@ -342,7 +342,7 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "id": 1,
     "user_id": 1,
@@ -356,7 +356,7 @@
     },
     "recorded_at": "2026-02-28T10:00:00Z"
   },
-  "message": "保存FFMI记录成功"
+  "msg": "保存FFMI记录成功"
 }
 ```
 
@@ -383,7 +383,7 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "id": 1,
     "name": "用户昵称",
@@ -403,7 +403,7 @@
       "fitness_goals": {}
     }
   },
-  "message": "获取用户详情成功"
+  "msg": "获取用户详情成功"
 }
 ```
 
@@ -432,7 +432,7 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": [
     {
       "id": 1,
@@ -450,7 +450,7 @@
     "per_page": 20,
     "last_page": 5
   },
-  "message": "获取用户列表成功"
+  "msg": "获取用户列表成功"
 }
 ```
 
@@ -481,7 +481,7 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "id": 2,
     "name": "新用户",
@@ -491,7 +491,7 @@
     "membership_tier": "free",
     "created_at": "2026-02-28T10:00:00Z"
   },
-  "message": "用户创建成功"
+  "msg": "用户创建成功"
 }
 ```
 
@@ -523,7 +523,7 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "id": 1,
     "name": "更新后的用户名",
@@ -533,7 +533,7 @@
     "membership_tier": "energy",
     "updated_at": "2026-02-28T10:05:00Z"
   },
-  "message": "用户更新成功"
+  "msg": "用户更新成功"
 }
 ```
 
@@ -561,9 +561,9 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": null,
-  "message": "用户删除成功"
+  "msg": "用户删除成功"
 }
 ```
 

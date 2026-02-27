@@ -115,7 +115,7 @@ AND (all_muscles_zh IS NULL OR JSON_LENGTH(all_muscles_zh) = 0)
       "has_muscles_primary_zh": 0,
       "needs_migration": 1790
     },
-    "message": "这是预览模式，不会修改数据",
+    "msg": "这是预览模式，不会修改数据",
     "next_step": "如果统计信息正确，请调用 POST /api/migrate/muscles/execute 执行迁移"
   }
 }
@@ -175,7 +175,7 @@ AND (all_muscles_zh IS NULL OR JSON_LENGTH(all_muscles_zh) = 0)
       "primary_muscle_zh": "胸大肌",
       "muscles_primary_zh": "[\"胸大肌\"]"
     },
-    "message": "迁移成功完成"
+    "msg": "迁移成功完成"
   }
 }
 ```
@@ -238,7 +238,7 @@ AND (all_muscles_zh IS NULL OR JSON_LENGTH(all_muscles_zh) = 0)
   "code": 200,
   "msg": "验证完成",
   "data": {
-    "success": true,
+    "code": 200,
     "stats": {
       "total": 1790,
       "has_primary_muscle_zh": 1790,
@@ -277,7 +277,7 @@ AND (all_muscles_zh IS NULL OR JSON_LENGTH(all_muscles_zh) = 0)
         "muscles_primary_zh": "[\"背阔肌\"]"
       }
     ],
-    "message": "所有记录已成功迁移"
+    "msg": "所有记录已成功迁移"
   }
 }
 ```
@@ -288,7 +288,7 @@ AND (all_muscles_zh IS NULL OR JSON_LENGTH(all_muscles_zh) = 0)
   "code": 200,
   "msg": "验证完成",
   "data": {
-    "success": false,
+    "code": 400,
     "stats": {
       "total": 1790,
       "has_primary_muscle_zh": 1790,
@@ -296,7 +296,7 @@ AND (all_muscles_zh IS NULL OR JSON_LENGTH(all_muscles_zh) = 0)
       "needs_migration": 290
     },
     "samples": [...],
-    "message": "仍有 290 条记录未迁移"
+    "msg": "仍有 290 条记录未迁移"
   }
 }
 ```
@@ -510,7 +510,7 @@ curl http://localhost:8000/api/migrate/muscles/verify
   "code": 200,
   "msg": "验证完成",
   "data": {
-    "success": true,
+    "code": 200,
     "stats": { "needs_migration": 0 }
   }
 }

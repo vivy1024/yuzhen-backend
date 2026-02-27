@@ -42,8 +42,8 @@
 **响应**:
 ```json
 {
-  "success": true,
-  "message": "训练数据记录成功",
+  "code": 200,
+  "msg": "训练数据记录成功",
   "data": {
     "exercise_name": "squat",
     "progress": {
@@ -102,8 +102,8 @@
 **响应**:
 ```json
 {
-  "success": true,
-  "message": "批量记录训练数据成功",
+  "code": 200,
+  "msg": "批量记录训练数据成功",
   "data": {
     "records": [
       {
@@ -150,7 +150,7 @@
 **响应**:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "strength_progress": {
       "squat": {
@@ -202,7 +202,7 @@
 **响应**:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "exercise_name": "squat",
     "progress": {
@@ -241,8 +241,8 @@
 **响应**:
 ```json
 {
-  "success": true,
-  "message": "训练记录删除成功",
+  "code": 200,
+  "msg": "训练记录删除成功",
   "data": {
     "strength_progress": {
       "squat": {
@@ -336,8 +336,8 @@ interface StrengthProgress {
 
 ```json
 {
-  "success": false,
-  "message": "数据验证失败",
+  "code": 400,
+  "msg": "数据验证失败",
   "errors": {
     "weight": ["The weight field is required."],
     "reps": ["The reps must be at least 1."]
@@ -349,8 +349,8 @@ interface StrengthProgress {
 
 ```json
 {
-  "success": false,
-  "message": "未找到动作 squat 的训练记录"
+  "code": 400,
+  "msg": "未找到动作 squat 的训练记录"
 }
 ```
 
@@ -358,8 +358,8 @@ interface StrengthProgress {
 
 ```json
 {
-  "success": false,
-  "message": "记录训练数据失败：Database connection error"
+  "code": 400,
+  "msg": "记录训练数据失败：Database connection error"
 }
 ```
 

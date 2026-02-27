@@ -50,7 +50,8 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
+  "msg": "注册成功",
   "data": {
     "user": {
       "id": 1,
@@ -63,8 +64,7 @@
     "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "expires_in": 3600
-  },
-  "message": "注册成功"
+  }
 }
 ```
 
@@ -96,7 +96,8 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
+  "msg": "注册成功",
   "data": {
     "user": {
       "id": 2,
@@ -109,8 +110,7 @@
     "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "expires_in": 3600
-  },
-  "message": "注册成功"
+  }
 }
 ```
 
@@ -139,7 +139,8 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
+  "msg": "登录成功",
   "data": {
     "user": {
       "id": 1,
@@ -152,8 +153,7 @@
     "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "expires_in": 3600
-  },
-  "message": "登录成功"
+  }
 }
 ```
 
@@ -181,13 +181,13 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "expires_in": 3600
   },
-  "message": "刷新令牌成功"
+  "msg": "刷新令牌成功"
 }
 ```
 
@@ -209,9 +209,9 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": null,
-  "message": "登出成功"
+  "msg": "登出成功"
 }
 ```
 
@@ -236,12 +236,12 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "expires_at": "2026-02-28T10:10:00Z",
     "wait_seconds": 60
   },
-  "message": "验证码已发送"
+  "msg": "验证码已发送"
 }
 ```
 
@@ -271,11 +271,11 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "verified": true
   },
-  "message": "验证成功"
+  "msg": "验证成功"
 }
 ```
 
@@ -304,7 +304,7 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "user": {
       "id": 1,
@@ -317,7 +317,7 @@
     "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "expires_in": 3600
   },
-  "message": "登录成功"
+  "msg": "登录成功"
 }
 ```
 
@@ -346,12 +346,12 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "phone": "13800138000",
     "is_registered": true
   },
-  "message": "查询成功"
+  "msg": "查询成功"
 }
 ```
 
@@ -376,11 +376,11 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "expires_at": "2026-02-28T10:10:00Z"
   },
-  "message": "验证码已发送"
+  "msg": "验证码已发送"
 }
 ```
 
@@ -410,11 +410,11 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "verified": true
   },
-  "message": "验证成功"
+  "msg": "验证成功"
 }
 ```
 
@@ -443,7 +443,7 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "user": {
       "id": 1,
@@ -456,7 +456,7 @@
     "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "expires_in": 3600
   },
-  "message": "登录成功"
+  "msg": "登录成功"
 }
 ```
 
@@ -488,9 +488,9 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": null,
-  "message": "密码重置成功"
+  "msg": "密码重置成功"
 }
 ```
 
@@ -519,11 +519,11 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "exists": true
   },
-  "message": "查询成功"
+  "msg": "查询成功"
 }
 ```
 
@@ -544,7 +544,7 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "tier": "energy",
     "permissions": ["chat.dag", "chat.agent", "credit.share"],
@@ -562,7 +562,7 @@
     },
     "user_id": 1
   },
-  "message": "获取权限成功"
+  "msg": "获取权限成功"
 }
 ```
 
@@ -583,7 +583,7 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "jwt_tier": "free",
     "current_tier": "energy",
@@ -593,7 +593,7 @@
     "tier_mismatch": true,
     "permissions_mismatch": true
   },
-  "message": "权限检查完成"
+  "msg": "权限检查完成"
 }
 ```
 
@@ -614,14 +614,14 @@
 - 响应示例:
 ```json
 {
-  "success": true,
+  "code": 200,
   "data": {
     "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "token_type": "Bearer",
     "expires_in": 3600
   },
-  "message": "Token已刷新，权限已更新"
+  "msg": "Token已刷新，权限已更新"
 }
 ```
 

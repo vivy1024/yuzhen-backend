@@ -164,8 +164,8 @@ class VerificationCodeMail extends Mailable
 **成功响应** (200):
 ```json
 {
-  "success": true,
-  "message": "验证码已发送到您的邮箱",
+  "code": 200,
+  "msg": "验证码已发送到您的邮箱",
   "data": {
     "expires_at": 1704182400
   }
@@ -202,8 +202,8 @@ class VerificationCodeMail extends Mailable
 **成功响应** (200):
 ```json
 {
-  "success": true,
-  "message": "验证成功",
+  "code": 200,
+  "msg": "验证成功",
   "data": {
     "verified": true
   }
@@ -237,8 +237,8 @@ class VerificationCodeMail extends Mailable
 **成功响应** (200):
 ```json
 {
-  "success": true,
-  "message": "登录成功",
+  "code": 200,
+  "msg": "登录成功",
   "data": {
     "user": {
       "id": 1,
