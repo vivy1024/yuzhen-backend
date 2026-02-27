@@ -5,6 +5,18 @@
 
 ---
 
+## #18 (fix) DYPNS短信验证码发送修复 — 2026-02-27
+
+对应产品版本：v1.5.2
+
+- AliyunDypnsClient.php: 修复 DYPNS API 响应解析
+  - `requestId`/`bizId` 从 `$body->model` 获取（非顶层）
+  - 添加 `templateParam` 参数（免资质通用模板仍需传递 code/min）
+  - 新增 `biz.FREQUENCY` 等业务错误码友好提示
+- checkSmsVerifyCode: 验证成功需 `$model->verifyResult === 'PASS'`
+
+---
+
 ## #17 (fix) AI对话请求验证补全 — AiChatRequest 添加缺失字段 — 2026-02-26
 
 对应产品版本：v1.5.0
