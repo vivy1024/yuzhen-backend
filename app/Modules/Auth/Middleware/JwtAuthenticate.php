@@ -7,6 +7,7 @@ use App\Modules\User\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * JWT Authenticate Middleware
@@ -34,7 +35,16 @@ class JwtAuthenticate
                 'data' => null
             ], 401);
         }
-        
+
+        // REQ-C3: 检查JWT黑名单（登出后的Token）
+        if (Cache::has('jwt_blacklist:' . md5($token))) {
+            return response()->json([
+                'code' => 401,
+                'msg' => 'Token已失效',
+                'data' => null
+            ], 401);
+        }
+
         // 验证Token
         $payload = $this->jwtService->verifyToken($token);
         

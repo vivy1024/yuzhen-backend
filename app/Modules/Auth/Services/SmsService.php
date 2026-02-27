@@ -3,8 +3,10 @@
 namespace App\Modules\Auth\Services;
 
 use App\Modules\User\Models\User;
+use App\Modules\Auth\Events\UserLoggedIn;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Event;
 use Exception;
 
 /**
@@ -218,6 +220,9 @@ class SmsService
         // 5. 生成Token
         $token = $this->jwtService->generateToken($user);
         $refreshToken = $this->jwtService->generateRefreshToken($user);
+
+        // REQ-H5: 触发登录事件（与密码登录一致）
+        Event::dispatch(new UserLoggedIn($user->toArray(), $ip));
 
         return [
             'success' => true,

@@ -24,8 +24,9 @@ Route::prefix('auth')->group(function () {
     // 手机号注册
     Route::post('/register/phone', [RegisterController::class, 'registerByPhone']);
     
-    // 用户登录
-    Route::post('/login', [LoginController::class, 'login']);
+    // 用户登录（REQ-H1: 同一IP 5次/分钟限制）
+    Route::post('/login', [LoginController::class, 'login'])
+        ->middleware('throttle:5,1');
     
     // 刷新Token
     Route::post('/refresh', [LoginController::class, 'refresh']);

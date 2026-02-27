@@ -7,6 +7,8 @@ use App\Modules\Auth\Events\UserLoggedIn;
 use App\Modules\Auth\Events\UserLoggedOut;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Auth Service
@@ -29,18 +31,35 @@ class AuthService
     {
         // 查找用户（支持用户名、邮箱、手机号）
         $user = $this->findUserByIdentifier($identifier);
-        
+
         if (!$user) {
+            Log::warning('登录失败：用户不存在', [
+                'identifier' => $identifier,
+                'ip' => $ip,
+                'reason' => 'user_not_found',
+            ]);
             throw new \Exception('用户不存在');
         }
-        
+
         // 验证密码
         if (!Hash::check($password, $user->password)) {
+            Log::warning('登录失败：密码错误', [
+                'identifier' => $identifier,
+                'user_id' => $user->id,
+                'ip' => $ip,
+                'reason' => 'wrong_password',
+            ]);
             throw new \Exception('密码错误');
         }
-        
+
         // 检查用户状态
         if ($user->status !== 1) {
+            Log::warning('登录失败：用户已被禁用', [
+                'identifier' => $identifier,
+                'user_id' => $user->id,
+                'ip' => $ip,
+                'reason' => 'user_disabled',
+            ]);
             throw new \Exception('用户已被禁用');
         }
         
@@ -118,16 +137,25 @@ class AuthService
     }
 
     /**
-     * 用户登出
+     * 用户登出（REQ-C3: JWT黑名单机制）
      */
     public function logout(User $user): bool
     {
-        // 撤销当前Token
-        $user->currentAccessToken()->delete();
-        
+        // 将当前Token加入Redis黑名单，TTL = Token剩余有效期
+        $token = request()->bearerToken();
+        if ($token) {
+            $payload = $this->jwtService->verifyToken($token);
+            if ($payload && isset($payload['exp'])) {
+                $ttl = $payload['exp'] - time();
+                if ($ttl > 0) {
+                    Cache::put('jwt_blacklist:' . md5($token), true, $ttl);
+                }
+            }
+        }
+
         // 触发登出事件
         Event::dispatch(new UserLoggedOut($user->toArray()));
-        
+
         return true;
     }
 
