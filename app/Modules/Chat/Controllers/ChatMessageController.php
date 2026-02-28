@@ -174,6 +174,59 @@ class ChatMessageController extends BaseController
         }
     }
 
+    public function getTopic(string $topicId, Request $request): JsonResponse
+    {
+        try {
+            $userId = $request->query('user_id');
+
+            $topic = ChatTopic::where('id', $topicId)
+                ->orWhere('name', $topicId)
+                ->first();
+
+            if (!$topic) {
+                return response()->json([
+                    'code' => 404, 'msg' => '话题不存在', 'data' => null
+                ], 404);
+            }
+
+            $messages = \App\Models\ChatMessage::where('topic_id', $topic->id)
+                ->orderBy('created_at', 'asc')
+                ->limit(20)
+                ->get()
+                ->map(function ($msg) {
+                    return [
+                        'role' => $msg->role,
+                        'content' => $msg->content,
+                        'timestamp' => $msg->created_at->toIso8601String(),
+                        'metadata' => [],
+                    ];
+                })
+                ->toArray();
+
+            return response()->json([
+                'code' => 200, 'msg' => '获取成功',
+                'data' => [
+                    'topic_id' => $topicId,
+                    'title' => $topic->name,
+                    'messages' => $messages,
+                    'metadata' => [
+                        'message_count' => $topic->message_count,
+                        'created_at' => $topic->created_at->toIso8601String(),
+                    ],
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get chat topic', [
+                'topic_id' => $topicId, 'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'code' => 500, 'msg' => '获取失败: ' . $e->getMessage(), 'data' => null
+            ], 500);
+        }
+    }
+
     public function clearTopic(string $topicId): JsonResponse
     {
         try {

@@ -5,6 +5,16 @@
 
 ---
 
+## #22 (fix) 生产日志问题修复 R2 — 内部API补全 — 2026-03-01
+
+对应产品版本：v1.6.6
+
+- 新增 `InternalUsageController::check()` — `POST /api/internal/usage/check`（internal.api 认证），供 DAML-RAG 用量预检查
+- 新增 `ChatMessageController::getTopic()` — `GET /api/internal/chat/topic/{topicId}`，供 DAML-RAG 对话历史加载
+- `routes/internal.php`: 注册上述 2 个新路由
+
+---
+
 ## #21 (fix) P2 端点安全加固 + env() 清理 — 2026-02-28
 
 对应产品版本：v1.6.3
