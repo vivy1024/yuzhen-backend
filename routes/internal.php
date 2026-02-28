@@ -9,6 +9,7 @@ use App\Modules\Chat\Controllers\ChatSearchController;
 use App\Modules\Training\Controllers\InternalTrainingController;
 use App\Http\Controllers\Internal\InternalCreditController;
 use App\Http\Controllers\Internal\UsageReportController;
+use App\Http\Controllers\Internal\InternalUsageController;
 
 /**
  * Internal API Routes
@@ -43,6 +44,7 @@ Route::prefix('internal')->middleware(['internal.api'])->group(function () {
     // 话题和消息API（为DAML-RAG多轮对话提供）— ChatMessageController
     Route::post('/chat/save-topic', [ChatMessageController::class, 'saveTopic']);
     Route::post('/chat/save-message', [ChatMessageController::class, 'saveMessage']);
+    Route::get('/chat/topic/{topicId}', [ChatMessageController::class, 'getTopic']);
     Route::delete('/chat/clear-topic/{topicId}', [ChatMessageController::class, 'clearTopic']);
 
     // 三轨评分API（为DAML-RAG工作流步骤12提供）— ChatSessionController
@@ -70,6 +72,10 @@ Route::prefix('internal')->middleware(['internal.api'])->group(function () {
     // 用量上报API（为DAML-RAG权限系统重构提供）
     // @requirements 4.3 - DAML-RAG完成AI查询后上报用量
     Route::post('/usage/report', [UsageReportController::class, 'report']);
+
+    // 用量检查API（为DAML-RAG预检查提供）
+    // @requirements 4.3 - DAML-RAG执行前检查用户用量
+    Route::post('/usage/check', [InternalUsageController::class, 'check']);
     
 });
 
