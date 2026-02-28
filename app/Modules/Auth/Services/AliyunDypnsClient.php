@@ -53,68 +53,73 @@ class AliyunDypnsClient
 
     /**
      * 发送短信验证码（使用DYPNS API）
-     * 
-     * DYPNS会自动生成6位验证码并发送，无需手动指定验证码
-     * 需要使用签名和模板，但这些是系统预置的，不需要申请审核
-     * 
+     *
+     * 免资质通用模板需要传入验证码，阿里云只负责发送不负责存储
+     * 验证码需本地存储（Redis），验证时查本地
+     *
      * @param string $phone 手机号
-     * @return array ['success' => bool, 'request_id' => string, 'message' => string, 'code' => string]
+     * @param string $code 验证码（6位数字）
+     * @return array ['success' => bool, 'request_id' => string, 'message' => string, 'biz_id' => string]
      */
-    public function sendSmsVerifyCode(string $phone): array
+    public function sendSmsVerifyCode(string $phone, string $code = ''): array
     {
         try {
-            // 获取配置的签名和模板
             $signName = config('aliyun.sms.sign_name');
             $templateCode = config('aliyun.sms.template_code');
-            
+
             if (empty($signName) || empty($templateCode)) {
                 throw new Exception('短信签名或模板未配置，请在阿里云控制台查看预置资源');
             }
-            
-            // 创建请求对象并设置参数
-            $request = new SendSmsVerifyCodeRequest();
-            $request->phoneNumber = $phone;
-            $request->signName = $signName;
-            $request->templateCode = $templateCode;
-            
-            // 生成6位验证码并设置为模板参数
-            // 根据阿里云DYPNS模板要求，需要传递code和min两个参数
-            $code = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $codeExpireMinutes = (int)(config('aliyun.sms.code_expire', 300) / 60); // 转换为分钟
-            $request->templateParam = json_encode([
-                'code' => $code,
-                'min' => (string)$codeExpireMinutes
+
+            // 验证码格式校验
+            if (empty($code) || !preg_match('/^\d{6}$/', $code)) {
+                throw new Exception('验证码格式错误，必须为6位数字');
+            }
+
+            $codeExpireMinutes = (int)(config('aliyun.sms.code_expire', 300) / 60);
+
+            $request = new SendSmsVerifyCodeRequest([
+                'phoneNumber' => $phone,
+                'signName' => $signName,
+                'templateCode' => $templateCode,
+                'codeLength' => 6,
+                'validTime' => $codeExpireMinutes,
+                'interval' => config('aliyun.rate_limit.send_interval', 60),
+                // 免资质通用模板需传递模板参数（code/min 对应模板占位符）
+                'templateParam' => json_encode([
+                    'code' => $code,
+                    'min' => (string)$codeExpireMinutes,
+                ]),
             ]);
 
             $response = $this->client->sendSmsVerifyCode($request);
             $body = $response->body;
 
-            // 记录日志（手机号脱敏）
             $maskedPhone = $this->maskPhone($phone);
+            $model = $body->model;
+
             Log::channel('daily')->info('DYPNS短信发送请求', [
                 'phone' => $maskedPhone,
-                'request_id' => $body->requestId ?? '',
                 'code' => $body->code ?? '',
                 'message' => $body->message ?? '',
-                'biz_id' => $body->bizId ?? '',
+                'request_id' => $model->requestId ?? '',
+                'biz_id' => $model->bizId ?? '',
             ]);
 
             if ($body->code === 'OK') {
                 return [
                     'success' => true,
-                    'request_id' => $body->requestId,
-                    'biz_id' => $body->bizId ?? '',
+                    'request_id' => $model->requestId ?? '',
+                    'biz_id' => $model->bizId ?? '',
                     'message' => '短信发送成功',
-                    // DYPNS不返回验证码，验证码由阿里云系统生成并发送
                 ];
             }
 
-            // 处理常见错误码
             $errorMessage = $this->parseErrorCode($body->code, $body->message);
-            
+
             return [
                 'success' => false,
-                'request_id' => $body->requestId ?? '',
+                'request_id' => $model->requestId ?? '',
                 'biz_id' => '',
                 'message' => $errorMessage,
             ];
@@ -123,7 +128,6 @@ class AliyunDypnsClient
             Log::channel('daily')->error('DYPNS短信发送异常', [
                 'phone' => $this->maskPhone($phone),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
@@ -137,7 +141,7 @@ class AliyunDypnsClient
 
     /**
      * 验证短信验证码（使用DYPNS API）
-     * 
+     *
      * @param string $phone 手机号
      * @param string $code 验证码
      * @return array ['success' => bool, 'request_id' => string, 'message' => string]
@@ -152,27 +156,26 @@ class AliyunDypnsClient
 
             $response = $this->client->checkSmsVerifyCode($request);
             $body = $response->body;
+            $model = $body->model;
 
-            // 记录日志（手机号脱敏）
             $maskedPhone = $this->maskPhone($phone);
             Log::channel('daily')->info('DYPNS验证码验证请求', [
                 'phone' => $maskedPhone,
-                'request_id' => $body->requestId ?? '',
                 'code' => $body->code ?? '',
                 'message' => $body->message ?? '',
+                'verify_result' => $model->verifyResult ?? '',
             ]);
 
-            if ($body->code === 'OK') {
+            if ($body->code === 'OK' && ($model->verifyResult ?? '') === 'PASS') {
                 return [
                     'success' => true,
-                    'request_id' => $body->requestId,
+                    'request_id' => $body->requestId ?? '',
                     'message' => '验证码验证成功',
                 ];
             }
 
-            // 处理验证失败的情况
             $errorMessage = $this->parseErrorCode($body->code, $body->message);
-            
+
             return [
                 'success' => false,
                 'request_id' => $body->requestId ?? '',
@@ -183,7 +186,6 @@ class AliyunDypnsClient
             Log::channel('daily')->error('DYPNS验证码验证异常', [
                 'phone' => $this->maskPhone($phone),
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
@@ -200,7 +202,13 @@ class AliyunDypnsClient
     private function parseErrorCode(string $code, string $message): string
     {
         $errorMap = [
-            // DYPNS特有错误码
+            // DYPNS 频率/业务错误码
+            'biz.FREQUENCY' => '短信发送过于频繁，请稍后再试',
+            'biz.VERIFY_CODE_EXPIRED' => '验证码已过期',
+            'biz.VERIFY_CODE_ERROR' => '验证码错误',
+            'biz.VERIFY_CODE_NOT_EXIST' => '验证码不存在，请重新发送',
+
+            // 阿里云通用错误码
             'isv.MOBILE_NUMBER_ILLEGAL' => '手机号格式不正确',
             'isv.BUSINESS_LIMIT_CONTROL' => '短信发送频率超限，请稍后再试',
             'isv.INVALID_PARAMETERS' => '参数无效',
@@ -213,11 +221,6 @@ class AliyunDypnsClient
             'isv.BLACK_KEY_CONTROL_LIMIT' => '手机号在黑名单中',
             'isv.DAY_LIMIT_CONTROL' => '触发日发送限额',
             'isv.SMS_CONTENT_ILLEGAL' => '短信内容包含违禁词',
-            
-            // 验证码相关错误
-            'isv.VERIFY_CODE_EXPIRED' => '验证码已过期',
-            'isv.VERIFY_CODE_ERROR' => '验证码错误',
-            'isv.VERIFY_CODE_NOT_EXIST' => '验证码不存在',
         ];
 
         return $errorMap[$code] ?? "操作失败：{$message}（错误码：{$code}）";

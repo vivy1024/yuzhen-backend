@@ -121,7 +121,7 @@ class TrainingSession extends Model
      */
     public function isInProgress(): bool
     {
-        return $this->status === 'in-progress';
+        return $this->status === 'in_progress';
     }
 
     /**
@@ -144,7 +144,7 @@ class TrainingSession extends Model
     public function start(): void
     {
         $this->update([
-            'status' => 'in-progress',
+            'status' => 'in_progress',
             'start_time' => now(),
         ]);
     }

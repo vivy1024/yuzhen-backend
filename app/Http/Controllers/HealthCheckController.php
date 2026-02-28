@@ -44,7 +44,7 @@ class HealthCheckController extends BaseController
     {
         return $this->success([
             'cors_allowed_origins' => config('cors.allowed_origins'),
-            'cors_allowed_origins_env' => env('CORS_ALLOWED_ORIGINS'),
+            'cors_allowed_origins_env' => config('cors.allowed_origins'),
             'cors_paths' => config('cors.paths'),
             'cors_supports_credentials' => config('cors.supports_credentials'),
         ], 'OK');
@@ -145,9 +145,9 @@ class HealthCheckController extends BaseController
     private function checkNeo4j(): array
     {
         try {
-            $neo4jUrl = config('database.connections.neo4j.url', env('NEO4J_URL'));
-            $neo4jUser = config('database.connections.neo4j.username', env('NEO4J_USERNAME'));
-            $neo4jPassword = config('database.connections.neo4j.password', env('NEO4J_PASSWORD'));
+            $neo4jUrl = config('services.neo4j.url');
+            $neo4jUser = config('services.neo4j.username');
+            $neo4jPassword = config('services.neo4j.password');
 
             if (!$neo4jUrl) {
                 return [
@@ -190,7 +190,7 @@ class HealthCheckController extends BaseController
     private function checkQdrant(): array
     {
         try {
-            $qdrantUrl = env('QDRANT_URL');
+            $qdrantUrl = config('services.qdrant.url');
             
             if (!$qdrantUrl) {
                 return [
@@ -231,7 +231,7 @@ class HealthCheckController extends BaseController
     private function checkDamlRag(): array
     {
         try {
-            $damlRagUrl = env('DAML_RAG_URL');
+            $damlRagUrl = config('services.daml_rag.url');
             
             if (!$damlRagUrl) {
                 return [

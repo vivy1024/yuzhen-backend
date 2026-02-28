@@ -5,6 +5,77 @@
 
 ---
 
+## #21 (fix) P2 端点安全加固 + env() 清理 — 2026-02-28
+
+对应产品版本：v1.6.3
+
+**未认证端点加固**：
+- routes/modules/food.php: `/clear-cache` 添加 `jwt.auth` + `role:admin` 中间件
+- routes/modules/help.php: `/faqs/{id}/feedback` 添加 `throttle:5,1` 限流
+
+**env() 直接调用清理**：
+- MCPToolsController: `env('MCO_BASE_URL')` → `config('services.mco.url')`
+- MetricsProxyController: `env('PROMETHEUS_URL')` / `env('DAML_RAG_URL')` → `config('services.prometheus.url')` / `config('services.daml_rag.url')`
+- MetricsProxyController: `env('LOKI_URL')` ×2 → `config('services.loki.url')`
+- HealthCheckController::checkNeo4j(): `env('NEO4J_*')` fallback → `config('services.neo4j.*')`
+- config/services.php: 新增 `mco` / `prometheus` / `loki` / `qdrant` / `neo4j` 配置块
+
+---
+
+## #20 (fix) 核心功能审计修复 — AI对话+训练计划 — 2026-02-28
+
+对应产品版本：v1.6.2
+
+**P0 安全漏洞（4个）**：
+- training-record.php: 添加 jwt.auth 中间件，移除 URL 中 user_id 参数
+- TrainingRecordController: 所有方法从 JWT 获取 user_id（不再信任请求体）
+- routes/api.php: 注释旧版 Modules 训练路由（消除 IDOR 漏洞）
+- AiProxyController::warmupStatus(): 添加 user_id 归属校验（403）
+- ChatTopicController: client_id 去重查询限定 user_id 范围
+
+**P1 功能修复（6个）**：
+- AiProxyController: env() → config('services.daml_rag.url')（config:cache 兼容）
+- config/services.php: 新增 daml_rag.url 配置项
+- UserPlanRequest: goal 枚举扩展（新增 hypertrophy/fat_loss/strength 等8个值）
+- TrainingPlanController::import(): 字段名双向兼容 duration_weeks/weeks + workouts_per_week/frequency
+- TrainingLogController::recordSession(): 兼容前端 exercises 格式自动转换
+- TrainingLogController::createFromPlan(): 优先从 planExercises 关联获取动作
+
+**P2 功能缺陷（3个）**：
+- TrainingRecord 模型: fillable/casts 对齐数据库 schema（session_id/rpe/rest_seconds）
+- TrainingSession 模型: 状态值统一 in-progress → in_progress
+- ChatTopicController::syncMessages(): 添加 DB::transaction 事务保护
+
+**P3 性能优化（1个）**：
+- ChatTopicController::sessions(): N+1 查询优化（批量预加载首条 user_query）
+
+**测试更新**：
+- TrainingRecordTest: 适配 JWT 认证 + 新路由路径 + 新增 401 测试
+
+## #19 (fix) 认证系统审计修复 — 2026-02-28
+
+对应产品版本：v1.6.1
+
+- EmailService::login(): 修复不存在的 generateTokens() 调用（REQ-C1）
+- EmailService::login(): 添加用户禁用状态检查（REQ-H4）
+- AuthService::logout(): JWT黑名单机制替代Sanctum方式（REQ-C3）
+- AuthService::login(): 登录失败添加审计日志（REQ-H7）
+- JwtAuthenticate中间件: 添加JWT黑名单检查（REQ-C3）
+- SmsService::loginWithSms(): 添加UserLoggedIn事件触发（REQ-H5）
+- auth.php路由: 登录接口添加throttle:5,1限流（REQ-H1）
+
+## #18 (fix) DYPNS短信验证码发送修复 — 2026-02-27
+
+对应产品版本：v1.5.2
+
+- AliyunDypnsClient.php: 修复 DYPNS API 响应解析
+  - `requestId`/`bizId` 从 `$body->model` 获取（非顶层）
+  - 添加 `templateParam` 参数（免资质通用模板仍需传递 code/min）
+  - 新增 `biz.FREQUENCY` 等业务错误码友好提示
+- checkSmsVerifyCode: 验证成功需 `$model->verifyResult === 'PASS'`
+
+---
+
 ## #17 (fix) AI对话请求验证补全 — AiChatRequest 添加缺失字段 — 2026-02-26
 
 对应产品版本：v1.5.0

@@ -45,8 +45,9 @@ require __DIR__.'/modules/user.php';
 // Auth模块 ✅
 require __DIR__.'/modules/auth.php';
 
-// Training模块 ✅
-require __DIR__.'/modules/training.php';
+// [REMOVED] 旧版训练路由已废弃，前端统一使用 /api/training/plans/*
+// 文件保留在 routes/modules/training.php 以备回滚
+// require __DIR__.'/modules/training.php';
 
 // Training Record模块（力量进步追踪）✅
 require __DIR__.'/modules/training-record.php';

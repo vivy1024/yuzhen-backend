@@ -3,8 +3,10 @@
 namespace App\Modules\Auth\Services;
 
 use App\Modules\User\Models\User;
+use App\Modules\Auth\Events\UserLoggedIn;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Event;
 use Exception;
 
 /**
@@ -85,8 +87,11 @@ class SmsService
             ];
         }
 
-        // 3. 发送短信（DYPNS会自动生成验证码）
-        $result = $this->dypnsClient->sendSmsVerifyCode($phone);
+        // 3. 生成验证码（免资质模板需要自行生成）
+        $code = $this->generateCode();
+
+        // 4. 发送短信
+        $result = $this->dypnsClient->sendSmsVerifyCode($phone, $code);
 
         if (!$result['success']) {
             return [
@@ -97,10 +102,10 @@ class SmsService
             ];
         }
 
-        // 4. 记录发送成功（DYPNS不返回验证码，验证由阿里云系统处理）
-        // 注意：使用DYPNS时，验证码由阿里云生成和存储，我们不需要在Redis中存储
+        // 5. 存储验证码到 Redis（免资质模板需本地存储）
+        $this->storeCode($phone, $code);
 
-        // 5. 更新发送记录
+        // 6. 更新发送记录
         $this->updateSendRecord($phone, $ip);
 
         $expiresAt = time() + $this->codeExpire;
@@ -115,8 +120,10 @@ class SmsService
     }
 
     /**
-     * 验证验证码（使用DYPNS API）
-     * 
+     * 验证验证码（本地Redis校验）
+     *
+     * 免资质模板验证码由本地存储，不走DYPNS API
+     *
      * @param string $phone 手机号
      * @param string $code 验证码
      * @return array ['success' => bool, 'message' => string]
@@ -132,10 +139,18 @@ class SmsService
             ];
         }
 
-        // 2. 调用DYPNS API验证验证码
-        $result = $this->dypnsClient->checkSmsVerifyCode($phone, $code);
+        // 2. 从Redis获取存储的验证码
+        $storedCode = $this->getStoredCode($phone);
 
-        if (!$result['success']) {
+        if (!$storedCode) {
+            return [
+                'success' => false,
+                'message' => '验证码已过期或不存在',
+            ];
+        }
+
+        // 3. 验证验证码
+        if ($code !== $storedCode) {
             // 验证失败，增加失败计数
             $this->incrementFailCount($phone);
             $failCount = $this->getFailCount($phone);
@@ -151,11 +166,12 @@ class SmsService
 
             return [
                 'success' => false,
-                'message' => $result['message'] . "，还剩{$remaining}次机会",
+                'message' => "验证码错误，还剩{$remaining}次机会",
             ];
         }
 
-        // 3. 验证成功，清除失败计数
+        // 4. 验证成功，删除验证码并清除失败计数
+        $this->deleteCode($phone);
         $this->clearFailCount($phone);
 
         return [
@@ -204,6 +220,9 @@ class SmsService
         // 5. 生成Token
         $token = $this->jwtService->generateToken($user);
         $refreshToken = $this->jwtService->generateRefreshToken($user);
+
+        // REQ-H5: 触发登录事件（与密码登录一致）
+        Event::dispatch(new UserLoggedIn($user->toArray(), $ip));
 
         return [
             'success' => true,

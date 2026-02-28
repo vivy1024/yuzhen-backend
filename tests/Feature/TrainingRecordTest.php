@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Tests\TestCase;
 use App\Modules\User\Models\User;
 use App\Modules\User\Models\UserProfile;
+use App\Modules\Auth\Services\JwtService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 /**
@@ -22,6 +23,7 @@ class TrainingRecordTest extends TestCase
 
     private User $user;
     private UserProfile $userProfile;
+    private string $token;
 
     protected function setUp(): void
     {
@@ -49,6 +51,28 @@ class TrainingRecordTest extends TestCase
             'health_status' => [],
             'nutrition_profile' => [],
         ]);
+
+        // JWT Token
+        $jwtService = app(JwtService::class);
+        $this->token = $jwtService->generateToken($this->user);
+    }
+
+    private function authPostJson(string $uri, array $data = [])
+    {
+        return $this->withHeaders(['Authorization' => "Bearer {$this->token}"])
+            ->postJson($uri, $data);
+    }
+
+    private function authGetJson(string $uri)
+    {
+        return $this->withHeaders(['Authorization' => "Bearer {$this->token}"])
+            ->getJson($uri);
+    }
+
+    private function authDeleteJson(string $uri)
+    {
+        return $this->withHeaders(['Authorization' => "Bearer {$this->token}"])
+            ->deleteJson($uri);
     }
 
     /**
@@ -56,8 +80,7 @@ class TrainingRecordTest extends TestCase
      */
     public function test_record_training_data()
     {
-        $response = $this->postJson('/api/training/record', [
-            'user_id' => $this->user->id,
+        $response = $this->authPostJson('/api/training/record', [
             'exercise_name' => 'squat',
             'weight' => 100,
             'reps' => 5,
@@ -81,8 +104,7 @@ class TrainingRecordTest extends TestCase
      */
     public function test_record_training_batch()
     {
-        $response = $this->postJson('/api/training/record-batch', [
-            'user_id' => $this->user->id,
+        $response = $this->authPostJson('/api/training/record-batch', [
             'records' => [
                 [
                     'exercise_name' => 'squat',
@@ -123,7 +145,7 @@ class TrainingRecordTest extends TestCase
         $this->userProfile->recordStrengthProgress('squat', 100, 5);
         $this->userProfile->recordStrengthProgress('bench_press', 80, 5);
 
-        $response = $this->getJson("/api/training/progress/{$this->user->id}");
+        $response = $this->authGetJson("/api/training/progress");
 
         $response->assertStatus(200)
             ->assertJson([
@@ -147,7 +169,7 @@ class TrainingRecordTest extends TestCase
         // 先记录一些数据
         $this->userProfile->recordStrengthProgress('squat', 100, 5);
 
-        $response = $this->getJson("/api/training/progress/{$this->user->id}/squat");
+        $response = $this->authGetJson("/api/training/progress/squat");
 
         $response->assertStatus(200)
             ->assertJson([
@@ -172,7 +194,7 @@ class TrainingRecordTest extends TestCase
         $this->userProfile->recordStrengthProgress('squat', 100, 5);
 
         // 删除第一条记录
-        $response = $this->deleteJson("/api/training/record/{$this->user->id}/squat/0");
+        $response = $this->authDeleteJson("/api/training/record/squat/0");
 
         $response->assertStatus(200)
             ->assertJson([
@@ -198,8 +220,7 @@ class TrainingRecordTest extends TestCase
         ];
 
         foreach ($testCases as $case) {
-            $response = $this->postJson('/api/training/record', [
-                'user_id' => $this->user->id,
+            $response = $this->authPostJson('/api/training/record', [
                 'exercise_name' => 'test_exercise',
                 'weight' => $case['weight'],
                 'reps' => $case['reps'],
@@ -216,8 +237,7 @@ class TrainingRecordTest extends TestCase
     public function test_strength_level_assessment()
     {
         // 深蹲30kg (0.43×体重70kg) → 应该是较低水平
-        $response = $this->postJson('/api/training/record', [
-            'user_id' => $this->user->id,
+        $response = $this->authPostJson('/api/training/record', [
             'exercise_name' => 'squat',
             'weight' => 30,
             'reps' => 1,
@@ -228,8 +248,7 @@ class TrainingRecordTest extends TestCase
         $this->assertContains($data['progress']['strength_level'], ['untrained', 'beginner']);
 
         // 深蹲105kg (1.5×体重) → intermediate
-        $response = $this->postJson('/api/training/record', [
-            'user_id' => $this->user->id,
+        $response = $this->authPostJson('/api/training/record', [
             'exercise_name' => 'squat',
             'weight' => 90,
             'reps' => 5,  // 估算1RM ≈ 105kg
@@ -244,8 +263,7 @@ class TrainingRecordTest extends TestCase
     public function test_validation()
     {
         // 测试缺少必需字段
-        $response = $this->postJson('/api/training/record', [
-            'user_id' => $this->user->id,
+        $response = $this->authPostJson('/api/training/record', [
             // 缺少 exercise_name, weight, reps
         ]);
 
@@ -256,8 +274,7 @@ class TrainingRecordTest extends TestCase
             ]);
 
         // 测试无效的重量
-        $response = $this->postJson('/api/training/record', [
-            'user_id' => $this->user->id,
+        $response = $this->authPostJson('/api/training/record', [
             'exercise_name' => 'squat',
             'weight' => -10,  // 负数
             'reps' => 5,
@@ -266,13 +283,20 @@ class TrainingRecordTest extends TestCase
         $response->assertStatus(422);
 
         // 测试无效的次数
-        $response = $this->postJson('/api/training/record', [
-            'user_id' => $this->user->id,
+        $response = $this->authPostJson('/api/training/record', [
             'exercise_name' => 'squat',
             'weight' => 100,
             'reps' => 0,  // 小于1
         ]);
 
         $response->assertStatus(422);
+    }
+
+    public function test_unauthenticated_returns_401()
+    {
+        $response = $this->postJson('/api/training/record', [
+            'exercise_name' => 'squat', 'weight' => 100, 'reps' => 5,
+        ]);
+        $response->assertStatus(401);
     }
 }

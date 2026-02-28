@@ -33,7 +33,7 @@ class MCPToolsController extends BaseController
 
     public function __construct()
     {
-        $this->mcoBaseUrl = env('MCO_BASE_URL', 'http://localhost:8001');
+        $this->mcoBaseUrl = config('services.mco.url', 'http://localhost:8001');
     }
 
     /**

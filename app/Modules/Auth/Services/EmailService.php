@@ -264,8 +264,23 @@ class EmailService
             ];
         }
 
-        // 3. 生成JWT Token
-        $tokens = $this->jwtService->generateTokens($user);
+        // 3. 检查用户状态（REQ-H4）
+        if (isset($user->status) && $user->status !== 1) {
+            return [
+                'success' => false,
+                'message' => '账号已被禁用',
+                'user' => null,
+                'tokens' => null,
+            ];
+        }
+
+        // 4. 生成JWT Token（REQ-C1: 修复不存在的 generateTokens 调用）
+        $tokens = [
+            'access_token' => $this->jwtService->generateToken($user),
+            'refresh_token' => $this->jwtService->generateRefreshToken($user),
+            'token_type' => 'Bearer',
+            'expires_in' => config('auth.jwt_ttl', 3600),
+        ];
 
         Log::info('邮箱验证码登录成功', [
             'user_id' => $user->id,
