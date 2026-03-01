@@ -5,6 +5,13 @@
 
 ---
 
+## #23 (feat) 协议同意记录 API — 2026-03-01
+
+- 新增 `user_consent_records` 表（migration）：记录用户同意协议的时间、版本、IP、UA
+- 新增 `UserConsentRecord` Model
+- 新增 `ConsentController`：`POST /api/consent/record` + `GET /api/consent/latest`
+- 新增 `routes/modules/consent.php`，注册到 `api.php`
+
 ## #22 (fix) 生产日志问题修复 R2 — 内部API补全 — 2026-03-01
 
 对应产品版本：v1.6.6
