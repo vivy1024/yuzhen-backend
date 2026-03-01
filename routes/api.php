@@ -117,6 +117,9 @@ require __DIR__.'/modules/user-settings.php';
 // Calculator模块（健身计算器，无需认证）✅
 require __DIR__.'/modules/calculator.php';
 
+// Consent模块（协议同意记录）✅
+require __DIR__.'/modules/consent.php';
+
 // AI代理模块已移至 routes/web.php（无/api前缀）
 // require __DIR__.'/modules/ai-proxy.php';
 
