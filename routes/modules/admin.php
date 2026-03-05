@@ -35,7 +35,7 @@ Route::prefix('admin')->middleware(['jwt.auth'])->group(function () {
     });
 });
 
-Route::prefix('admin')->middleware(['jwt.auth', 'admin'])->group(function () {
+Route::prefix('admin')->middleware(['jwt.auth', 'admin', 'throttle:60,1'])->group(function () {
     
     // ========== 订单管理 ==========
     Route::prefix('orders')->group(function () {
@@ -165,16 +165,13 @@ Route::prefix('admin')->middleware(['jwt.auth', 'admin'])->group(function () {
         Route::get('/retention', [AdminKpiController::class, 'retention']);
     });
 
-    // ========== 数据迁移（临时） ==========
-    Route::prefix('migrate')->group(function () {
-        // 肌肉字段迁移预览
-        Route::get('/muscles/preview', [DataMigrationController::class, 'previewMuscleMigration']);
-        
-        // 执行肌肉字段迁移
-        Route::post('/muscles/execute', [DataMigrationController::class, 'executeMuscleMigration']);
-        
-        // 验证迁移结果
-        Route::get('/muscles/verify', [DataMigrationController::class, 'verifyMigration']);
-    });
+    // ========== 数据迁移（已完成，路由已移除） ==========
+    // [REMOVED 2026-03-05] 肌肉字段迁移已完成，生产环境无需保留
+    // 控制器文件保留在 app/Http/Controllers/Admin/DataMigrationController.php 以备参考
+    // Route::prefix('migrate')->group(function () {
+    //     Route::get('/muscles/preview', [DataMigrationController::class, 'previewMuscleMigration']);
+    //     Route::post('/muscles/execute', [DataMigrationController::class, 'executeMuscleMigration']);
+    //     Route::get('/muscles/verify', [DataMigrationController::class, 'verifyMigration']);
+    // });
     
 });

@@ -20,7 +20,7 @@ return [
     // 根据环境区分允许的域名
     // 生产环境：仅允许yuzhen-fitness.cn及其子域名 + Capacitor移动端
     // 开发环境：允许localhost相关域名
-    'allowed_origins' => env('APP_ENV') === 'production'
+    'allowed_origins' => config('app.env') === 'production'
         ? [
             'https://app.yuzhen-fitness.cn',
             'https://yuzhen-fitness.cn',

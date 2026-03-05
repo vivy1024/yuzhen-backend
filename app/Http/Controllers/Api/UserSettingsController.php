@@ -128,7 +128,48 @@ class UserSettingsController extends BaseController
             // 撤销所有 token
             $user->tokens()->delete();
 
-            // 软删除用户
+            // 清理用户关联数据（个保法合规）
+            $userId = $user->id;
+
+            // 聊天数据
+            \DB::table('chat_messages')->where('user_id', $userId)->delete();
+            \DB::table('chat_sessions')->where('user_id', $userId)->delete();
+            \App\Models\ChatTopic::where('user_id', $userId)->forceDelete();
+
+            // 训练数据
+            \DB::table('training_plan_exercises')
+                ->whereIn('training_plan_id', function ($q) use ($userId) {
+                    $q->select('id')->from('training_plans')
+                      ->where('user_id', $userId);
+                })->delete();
+            \App\Models\TrainingPlan::where('user_id', $userId)->forceDelete();
+            \DB::table('training_records')->where('user_id', $userId)->delete();
+            \DB::table('training_logs')->where('user_id', $userId)->delete();
+            \DB::table('personal_bests')->where('user_id', $userId)->delete();
+
+            // 进度与目标
+            \DB::table('progress_records')->where('user_id', $userId)->delete();
+            \DB::table('fitness_goals')->where('user_id', $userId)->delete();
+
+            // 积分与使用统计
+            \DB::table('credit_logs')->where('user_id', $userId)->delete();
+            \DB::table('user_credits')->where('user_id', $userId)->delete();
+            \DB::table('user_usage_stats')->where('user_id', $userId)->delete();
+            \DB::table('usage_stats')->where('user_id', $userId)->delete();
+
+            // 反馈与收藏
+            \DB::table('feedbacks')->where('user_id', $userId)->delete();
+            \DB::table('user_favorite_exercises')->where('user_id', $userId)->delete();
+
+            // 同意记录与通知
+            \DB::table('user_consent_records')->where('user_id', $userId)->delete();
+            \DB::table('notifications')->where('notifiable_id', $userId)->delete();
+
+            // 用户档案（最后删除）
+            \App\Modules\User\Models\UserProfile::where('user_id', $userId)->delete();
+            \DB::table('social_accounts')->where('user_id', $userId)->delete();
+
+            // 软删除用户（保留30天冷静期）
             $user->delete();
 
             return $this->success(null, '账号已注销');

@@ -5,6 +5,25 @@
 
 ---
 
+## #24 (security) 安全审计修复 R2 — 2026-03-05
+
+对应产品版本：v1.6.8
+
+**P0 修复**：
+- config/cors.php: `env('APP_ENV')` → `config('app.env')`（config:cache 后 CORS 白名单失效）
+- JwtService.php: `config('auth.jwt_secret') ?: env('JWT_SECRET', '')` → `config('auth.jwt_secret', '')`（移除 env() 回退）
+
+**P1 修复**：
+- UserSettingsController::deleteAccount(): 软删除前清理 20 张关联表数据（个保法合规）
+- training-record.php: 添加 `throttle:30,1` 速率限制
+- admin.php: 路由组添加 `throttle:60,1` 速率限制
+
+**P2 修复**：
+- SecurityHeaders.php: CSP `script-src` 移除 `'unsafe-eval'`
+- admin.php: 注释已完成的数据迁移路由（移除攻击面）
+
+---
+
 ## #23 (feat) 协议同意记录 API — 2026-03-01
 
 - 新增 `user_consent_records` 表（migration）：记录用户同意协议的时间、版本、IP、UA

@@ -25,7 +25,7 @@ class JwtService
     
     public function __construct()
     {
-        $this->secret = config('auth.jwt_secret') ?: env('JWT_SECRET', '');
+        $this->secret = config('auth.jwt_secret', '');
         if (empty($this->secret)) {
             throw new \RuntimeException('JWT_SECRET未配置，拒绝启动。请在.env中设置JWT_SECRET');
         }

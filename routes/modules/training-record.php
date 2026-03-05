@@ -12,7 +12,7 @@ use App\Http\Controllers\Api\TrainingRecordController;
  * @date 2025-12-19
  */
 
-Route::prefix('training')->middleware('jwt.auth')->group(function () {
+Route::prefix('training')->middleware(['jwt.auth', 'throttle:30,1'])->group(function () {
 
     // 记录训练数据
     Route::post('/record', [TrainingRecordController::class, 'recordTraining']);
