@@ -5,6 +5,14 @@
 
 ---
 
+## #26 (feat) stats 接口扩展 — 今日/本周/本月/连续打卡 — 2026-03-06
+
+- `TrainingLogController::stats()` 重构：返回 `today_count`/`week_count`/`month_count`/`streak_days`/`total_sessions`/`total_volume_kg`
+- 新增 `calculateStreakDays()` 私有方法：从今天/昨天往前逐日检查连续完成记录
+- 新增 `calculateTotalVolume()` 私有方法：遍历 `actual_exercises` JSON 计算总容量
+
+---
+
 ## #25 (fix) 训练日历数据源统一 — 2026-03-06
 
 - **数据源不一致修复**: 训练日历 `getTrainingCalendarData()` 从 `training_sessions` 改为 `training_logs`

@@ -427,35 +427,111 @@ class TrainingLogController extends BaseController
                 return $this->fail('用户未认证', 401);
             }
 
-            $startDate = $request->input('start_date', now()->subDays(30)->toDateString());
-            $endDate = $request->input('end_date', now()->toDateString());
+            $userId = $user->id;
+            $today = now()->toDateString();
 
-            $logs = TrainingLog::forUser($user->id)
-                ->dateRange($startDate, $endDate)
-                ->get();
+            $todayCount = TrainingLog::forUser($userId)
+                ->where('status', 'completed')
+                ->whereDate('session_date', $today)
+                ->count();
+
+            $weekStart = now()->startOfWeek()->toDateString();
+            $weekCount = TrainingLog::forUser($userId)
+                ->where('status', 'completed')
+                ->whereBetween('session_date', [$weekStart, $today])
+                ->count();
+
+            $monthStart = now()->startOfMonth()->toDateString();
+            $monthCount = TrainingLog::forUser($userId)
+                ->where('status', 'completed')
+                ->whereBetween('session_date', [$monthStart, $today])
+                ->count();
+
+            $streakDays = $this->calculateStreakDays($userId);
+
+            $totalSessions = TrainingLog::forUser($userId)
+                ->where('status', 'completed')
+                ->count();
+
+            $totalVolumeKg = $this->calculateTotalVolume($userId);
 
             $stats = [
-                'total_sessions' => $logs->count(),
-                'avg_completion_rate' => $logs->avg('completion_rate') ?? 0,
-                'avg_rpe' => $logs->avg('avg_rpe') ?? 0,
-                'total_exercises' => 0,
-                'total_sets' => 0,
+                'today_count' => $todayCount,
+                'week_count' => $weekCount,
+                'month_count' => $monthCount,
+                'streak_days' => $streakDays,
+                'total_sessions' => $totalSessions,
+                'total_volume_kg' => round($totalVolumeKg, 1),
             ];
-
-            foreach ($logs as $log) {
-                if (!empty($log->actual_exercises)) {
-                    $stats['total_exercises'] += count($log->actual_exercises);
-                    foreach ($log->actual_exercises as $exercise) {
-                        $stats['total_sets'] += $exercise['completed_sets'] ?? 0;
-                    }
-                }
-            }
 
             return $this->success($stats, '获取训练统计成功');
 
         } catch (\Exception $e) {
             return $this->handleException($e, '获取训练统计');
         }
+    }
+
+    /**
+     * 计算连续打卡天数
+     */
+    private function calculateStreakDays(int $userId): int
+    {
+        $dates = TrainingLog::forUser($userId)
+            ->where('status', 'completed')
+            ->select(DB::raw('DISTINCT DATE(session_date) as d'))
+            ->orderBy('d', 'desc')
+            ->pluck('d')
+            ->toArray();
+
+        if (empty($dates)) {
+            return 0;
+        }
+
+        $streak = 0;
+        $checkDate = now()->startOfDay();
+
+        // 如果今天没有训练，从昨天开始检查
+        if ($dates[0] !== $checkDate->toDateString()) {
+            $checkDate = $checkDate->subDay();
+        }
+
+        foreach ($dates as $date) {
+            if ($date === $checkDate->toDateString()) {
+                $streak++;
+                $checkDate = $checkDate->subDay();
+            } else {
+                break;
+            }
+        }
+
+        return $streak;
+    }
+
+    /**
+     * 计算总训练容量
+     */
+    private function calculateTotalVolume(int $userId): float
+    {
+        $logs = TrainingLog::forUser($userId)
+            ->where('status', 'completed')
+            ->whereNotNull('actual_exercises')
+            ->get(['actual_exercises']);
+
+        $total = 0;
+        foreach ($logs as $log) {
+            if (!is_array($log->actual_exercises)) continue;
+            foreach ($log->actual_exercises as $exercise) {
+                $weight = $exercise['weight'] ?? 0;
+                $repsPerSet = $exercise['reps_per_set'] ?? [];
+                if (is_array($repsPerSet)) {
+                    foreach ($repsPerSet as $reps) {
+                        $total += $weight * $reps;
+                    }
+                }
+            }
+        }
+
+        return $total;
     }
 
     /**
