@@ -7,8 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Modules\Progress\Models\ProgressRecord;
 use App\Modules\Progress\Models\FitnessGoal;
-use App\Modules\Training\Models\TrainingSession;
-use App\Modules\Training\Models\TrainingRecord;
+use App\Models\TrainingLog;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -509,34 +508,35 @@ class ProgressController extends BaseController
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
 
-        // 获取该月所有训练会话
-        $sessions = TrainingSession::where('user_id', $userId)
+        $logs = TrainingLog::where('user_id', $userId)
             ->where('status', 'completed')
-            ->whereBetween('completed_at', [$startDate, $endDate])
-            ->with('records')
+            ->whereBetween('session_date', [$startDate, $endDate])
             ->get();
 
-        // 按日期分组
-        $sessionsByDate = $sessions->groupBy(fn($s) => $s->completed_at->format('Y-m-d'));
+        $logsByDate = $logs->groupBy(fn($l) => $l->session_date->format('Y-m-d'));
 
-        // 生成日历数据
         $calendar = [];
         $current = $startDate->copy();
         while ($current <= $endDate) {
             $dateStr = $current->format('Y-m-d');
-            $daySessions = $sessionsByDate->get($dateStr, collect());
+            $dayLogs = $logsByDate->get($dateStr, collect());
 
             $totalVolume = 0;
-            foreach ($daySessions as $session) {
-                foreach ($session->records as $record) {
-                    $totalVolume += ($record->weight ?? 0) * ($record->reps ?? 0);
+            foreach ($dayLogs as $log) {
+                foreach ($log->actual_exercises ?? [] as $exercise) {
+                    $sets = $exercise['completed_sets'] ?? 0;
+                    $reps = is_array($exercise['completed_reps'] ?? null)
+                        ? array_sum($exercise['completed_reps'])
+                        : ($exercise['completed_reps'] ?? 0);
+                    $weight = $exercise['actual_weight'] ?? 0;
+                    $totalVolume += $weight * $reps;
                 }
             }
 
             $calendar[] = [
                 'date' => $dateStr,
-                'hasTraining' => $daySessions->isNotEmpty(),
-                'sessionCount' => $daySessions->count(),
+                'hasTraining' => $dayLogs->isNotEmpty(),
+                'sessionCount' => $dayLogs->count(),
                 'totalVolume' => round($totalVolume, 0),
             ];
 
@@ -561,29 +561,39 @@ class ProgressController extends BaseController
             ->orderBy('date', 'asc')
             ->first();
 
-        // 计算本月训练天数
-        $thisMonth = TrainingSession::where('user_id', $userId)
+        // 计算本月训练天数（从 training_logs 读取）
+        $thisMonth = TrainingLog::where('user_id', $userId)
             ->where('status', 'completed')
-            ->whereMonth('completed_at', now()->month)
-            ->whereYear('completed_at', now()->year)
-            ->distinct('completed_at')
-            ->count(DB::raw('DATE(completed_at)'));
+            ->whereMonth('session_date', now()->month)
+            ->whereYear('session_date', now()->year)
+            ->distinct('session_date')
+            ->count('session_date');
 
         // 计算上月训练天数
-        $lastMonth = TrainingSession::where('user_id', $userId)
+        $lastMonth = TrainingLog::where('user_id', $userId)
             ->where('status', 'completed')
-            ->whereMonth('completed_at', now()->subMonth()->month)
-            ->whereYear('completed_at', now()->subMonth()->year)
-            ->distinct('completed_at')
-            ->count(DB::raw('DATE(completed_at)'));
+            ->whereMonth('session_date', now()->subMonth()->month)
+            ->whereYear('session_date', now()->subMonth()->year)
+            ->distinct('session_date')
+            ->count('session_date');
 
-        // 计算总训练量（本月）
-        $totalVolume = TrainingRecord::whereHas('session', function ($q) use ($userId) {
-            $q->where('user_id', $userId)
-                ->where('status', 'completed')
-                ->whereMonth('completed_at', now()->month)
-                ->whereYear('completed_at', now()->year);
-        })->sum(DB::raw('COALESCE(weight, 0) * COALESCE(reps, 0)'));
+        // 计算总训练量（本月，从 training_logs JSON 字段计算）
+        $monthLogs = TrainingLog::where('user_id', $userId)
+            ->where('status', 'completed')
+            ->whereMonth('session_date', now()->month)
+            ->whereYear('session_date', now()->year)
+            ->get();
+
+        $totalVolume = 0;
+        foreach ($monthLogs as $log) {
+            foreach ($log->actual_exercises ?? [] as $exercise) {
+                $reps = is_array($exercise['completed_reps'] ?? null)
+                    ? array_sum($exercise['completed_reps'])
+                    : ($exercise['completed_reps'] ?? 0);
+                $weight = $exercise['actual_weight'] ?? 0;
+                $totalVolume += $weight * $reps;
+            }
+        }
 
         // 计算体重变化
         $weightChange = 0;

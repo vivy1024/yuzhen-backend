@@ -5,6 +5,17 @@
 
 ---
 
+## #25 (fix) 训练日历数据源统一 — 2026-03-06
+
+- **数据源不一致修复**: 训练日历 `getTrainingCalendarData()` 从 `training_sessions` 改为 `training_logs`
+  - `ProgressController` 的日历和统计方法全部改为查询 `training_logs` 表
+  - 移除对 `TrainingSession` 和 `TrainingRecord` 模型的依赖
+- **新增 migration**: `training_logs` 表添加 `status`(draft/in_progress/completed) + `completed_at` 列
+  - 修复 `TrainingLogController::complete()` 的 status/completed_at 更新无效问题
+- **TrainingLog 模型更新**: `$fillable` 和 `$casts` 添加 status + completed_at
+
+---
+
 ## #24 (security) 安全审计修复 R2 — 2026-03-05
 
 对应产品版本：v1.6.8
@@ -309,3 +320,5 @@
 - 从 legacy v2.127.0 冻结归档后的新起点
 - Laravel PHP 后端，含会员体系、积分系统、Internal JWT 认证
 - 对应产品版本：v1.0.0
+
+

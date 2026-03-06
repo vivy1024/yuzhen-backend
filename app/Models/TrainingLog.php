@@ -44,6 +44,8 @@ class TrainingLog extends Model
         'week_number',
         'mesocycle_id',
         'notes',
+        'status',
+        'completed_at',
     ];
 
     protected $casts = [
@@ -56,6 +58,7 @@ class TrainingLog extends Model
         'training_plan_id' => 'integer',
         'plan_week' => 'integer',
         'plan_day' => 'integer',
+        'completed_at' => 'datetime',
     ];
 
     /**
