@@ -43,7 +43,7 @@ class AiProxyController extends BaseController
         Log::info('[AiProxy] 流式聊天请求', [
             'user_id' => $data['user_id'] ?? null,
             'query' => substr($data['query'] ?? '', 0, 100),
-            'strategy' => $data['strategy'] ?? 'dag'
+            'thread_id' => $data['thread_id'] ?? null,
         ]);
         
         // 从中间件获取认证头（InternalJwtForward已设置）

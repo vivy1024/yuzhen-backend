@@ -5,6 +5,17 @@
 
 ---
 
+## #56 (feat) Agent v2 接口对齐 — Thread + Approval + Request 重构 — 2026-05-09
+
+- `AiChatRequest.php`: 移除 strategy/template_id/persona_id，新增 thread_id
+- `ThreadController.php`: 线程 CRUD (create/list/delete)
+- `ApprovalController.php`: HITL 审批回调 (respond/pending)
+- `2026_05_09_000001_create_chat_threads_table.php`: chat_threads 表迁移
+- `routes/api.php`: 注册 thread + approval 路由组
+- `AiProxyController::streamChat`: 日志从 strategy 改为 thread_id
+
+---
+
 ## #26 (feat) stats 接口扩展 — 今日/本周/本月/连续打卡 — 2026-03-06
 
 - `TrainingLogController::stats()` 重构：返回 `today_count`/`week_count`/`month_count`/`streak_days`/`total_sessions`/`total_volume_kg`

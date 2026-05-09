@@ -1485,3 +1485,5 @@ mysqldump -h 182.92.78.183 -P 30932 -u root -p fitness_app > backup.sql
 **维护者**: 薛小川  
 **最后更新**: 2026-01-17
 
+
+

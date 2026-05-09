@@ -139,6 +139,19 @@ Route::prefix('ai')->group(function () {
         Route::post('/v1/chat', [\App\Http\Controllers\AiProxyController::class, 'chat']);
     });
     
+    // 线程管理（需要JWT认证）
+    Route::middleware(['jwt.auth'])->group(function () {
+        Route::post('/v1/thread/create', [\App\Http\Controllers\Api\ThreadController::class, 'create']);
+        Route::get('/v1/thread/list', [\App\Http\Controllers\Api\ThreadController::class, 'list']);
+        Route::delete('/v1/thread/{threadId}', [\App\Http\Controllers\Api\ThreadController::class, 'delete']);
+    });
+    
+    // HITL 审批回调（需要JWT认证 + Internal JWT转发）
+    Route::middleware(['jwt.auth', 'internal.jwt.forward'])->group(function () {
+        Route::post('/v1/approval/respond', [\App\Http\Controllers\Api\ApprovalController::class, 'respond']);
+        Route::get('/v1/approval/pending', [\App\Http\Controllers\Api\ApprovalController::class, 'pending']);
+    });
+    
     // 用户预热接口（需要JWT认证 + Internal JWT转发，不需要配额检查）
     Route::middleware(['jwt.auth', 'internal.jwt.forward'])->group(function () {
         Route::post('/v1/user/warmup', [\App\Http\Controllers\AiProxyController::class, 'warmup']);
