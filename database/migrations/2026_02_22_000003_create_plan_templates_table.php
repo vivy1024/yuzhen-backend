@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->string('name', 100)->comment('模板名称');
             $table->text('description')->nullable()->comment('模板描述');
-            $table->enum('goal', ['lose_weight', 'gain_muscle', 'maintain', 'improve_fitness'])->comment('训练目标');
+            $table->enum('goal', ['hypertrophy', 'fat_loss', 'strength', 'endurance', 'body_shaping', 'general_fitness', 'functional', 'rehabilitation', 'athletic_performance'])->comment('训练目标');
             $table->enum('level', ['novice', 'beginner', 'intermediate', 'advanced'])->comment('适合等级');
             $table->integer('duration_weeks')->default(4)->comment('周期(周)');
             $table->integer('workouts_per_week')->default(3)->comment('每星期训练次数');

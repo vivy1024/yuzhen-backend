@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('name')->comment('计划名称');
             $table->string('name_zh')->nullable()->comment('计划名称（中文）');
             $table->text('description')->nullable()->comment('计划描述');
-            $table->enum('goal', ['lose_weight', 'gain_muscle', 'maintain', 'improve_fitness'])->nullable()->comment('训练目标');
+            $table->enum('goal', ['hypertrophy', 'fat_loss', 'strength', 'endurance', 'body_shaping', 'general_fitness', 'functional', 'rehabilitation', 'athletic_performance'])->nullable()->comment('训练目标');
             $table->enum('difficulty', ['novice', 'beginner', 'intermediate', 'advanced'])->nullable()->comment('难度');
             $table->integer('duration_weeks')->default(4)->comment('总周数');
             $table->integer('workouts_per_week')->default(3)->comment('每星期训练次数');

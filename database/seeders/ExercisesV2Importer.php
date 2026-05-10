@@ -200,8 +200,8 @@ class ExercisesV2Importer extends Seeder
             'equipment_en' => $data['equipment_en'] ?? null,
             'equipment_zh' => $data['equipment_zh'] ?? null,
             
-            // 难度信息
-            'difficulty_en' => $data['difficulty_en'] ?? null,
+            // 难度信息（Zero_Base 是旧数据源错误命名，统一为 musclewiki 标准 Novice）
+            'difficulty_en' => ($data['difficulty_en'] ?? null) === 'Zero_Base' ? 'Novice' : ($data['difficulty_en'] ?? null),
             'difficulty_zh' => $data['difficulty_zh'] ?? null,
             
             // 力量类型
