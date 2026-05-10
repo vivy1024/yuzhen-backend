@@ -6,6 +6,7 @@ use App\Modules\Auth\Controllers\RegisterController;
 use App\Modules\Auth\Controllers\SmsController;
 use App\Modules\Auth\Controllers\EmailController;
 use App\Modules\Auth\Controllers\PermissionController;
+use App\Modules\Auth\Controllers\CaptchaController;
 
 /**
  * Auth Module Routes
@@ -18,6 +19,10 @@ use App\Modules\Auth\Controllers\PermissionController;
 Route::prefix('auth')->group(function () {
     
     // 公开路由（无需认证）
+    
+    // 图形验证码
+    Route::get('/captcha', [CaptchaController::class, 'generate']);
+    Route::post('/captcha/verify', [CaptchaController::class, 'verify']);
     
     // 用户注册
     Route::post('/register', [RegisterController::class, 'register']);
@@ -41,6 +46,8 @@ Route::prefix('auth')->group(function () {
         Route::post('/login', [SmsController::class, 'login']);
         // 检查手机号是否已注册
         Route::get('/check-phone', [SmsController::class, 'checkPhone']);
+        // 手机号重置密码
+        Route::post('/reset-password', [SmsController::class, 'resetPassword']);
     });
     
     // 邮箱验证码相关路由

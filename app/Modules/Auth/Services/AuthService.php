@@ -29,10 +29,21 @@ class AuthService
      */
     public function login(string $identifier, string $password, string $ip): array
     {
+        // 检查是否被锁定
+        $lockKey = "login_locked:{$identifier}";
+        if (Cache::has($lockKey)) {
+            $remainingSeconds = Cache::get($lockKey) - time();
+            if ($remainingSeconds > 0) {
+                throw new \Exception("登录失败次数过多，请{$remainingSeconds}秒后重试");
+            }
+            Cache::forget($lockKey);
+        }
+
         // 查找用户（支持用户名、邮箱、手机号）
         $user = $this->findUserByIdentifier($identifier);
 
         if (!$user) {
+            $this->recordLoginFailure($identifier);
             Log::warning('登录失败：用户不存在', [
                 'identifier' => $identifier,
                 'ip' => $ip,
@@ -43,6 +54,7 @@ class AuthService
 
         // 验证密码
         if (!Hash::check($password, $user->password)) {
+            $this->recordLoginFailure($identifier);
             Log::warning('登录失败：密码错误', [
                 'identifier' => $identifier,
                 'user_id' => $user->id,
@@ -62,6 +74,9 @@ class AuthService
             ]);
             throw new \Exception('用户已被禁用');
         }
+
+        // 登录成功，清除失败计数
+        Cache::forget("login_fail_count:{$identifier}");
         
         // 更新最后登录时间
         $user->updateLastLogin($ip);
@@ -200,5 +215,28 @@ class AuthService
             ->orWhere('phone', $identifier)  // ✅ 已恢复：手机号唯一约束已添加
             ->first();
     }
-}
 
+    /**
+     * 记录登录失败，连续5次锁定15分钟
+     */
+    private function recordLoginFailure(string $identifier): void
+    {
+        $countKey = "login_fail_count:{$identifier}";
+        $lockKey = "login_locked:{$identifier}";
+        $maxAttempts = 5;
+        $lockSeconds = 900; // 15分钟
+
+        $count = (int) Cache::get($countKey, 0) + 1;
+        Cache::put($countKey, $count, $lockSeconds);
+
+        if ($count >= $maxAttempts) {
+            Cache::put($lockKey, time() + $lockSeconds, $lockSeconds);
+            Cache::forget($countKey);
+            Log::warning('登录锁定：连续失败次数过多', [
+                'identifier' => $identifier,
+                'attempts' => $count,
+                'lock_seconds' => $lockSeconds,
+            ]);
+        }
+    }
+}

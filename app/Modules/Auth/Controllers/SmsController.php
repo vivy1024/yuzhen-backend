@@ -223,4 +223,58 @@ class SmsController extends BaseController
             return $this->handleException($e, '检查手机号');
         }
     }
+
+    /**
+     * 手机号重置密码
+     * 
+     * POST /api/auth/sms/reset-password
+     * 参数: phone, code, password, password_confirmation
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'phone' => ['required', 'string', 'regex:/^1[3-9]\d{9}$/'],
+                'code' => 'required|string|size:6',
+                'password' => 'required|string|min:8|confirmed',
+            ], [
+                'phone.required' => '手机号不能为空',
+                'phone.regex' => '手机号格式不正确',
+                'code.required' => '验证码不能为空',
+                'code.size' => '验证码为6位数字',
+                'password.required' => '新密码不能为空',
+                'password.min' => '密码至少8位',
+                'password.confirmed' => '两次密码不一致',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->fail($validator->errors()->first(), 422);
+            }
+
+            $phone = $request->input('phone');
+            $code = $request->input('code');
+            $password = $request->input('password');
+
+            // 验证短信验证码
+            $verifyResult = $this->smsService->verifyCode($phone, $code);
+            if (!$verifyResult['success']) {
+                return $this->fail($verifyResult['message'], 422);
+            }
+
+            // 查找用户
+            $user = \App\Modules\User\Models\User::where('phone', $phone)->first();
+            if (!$user) {
+                return $this->fail('该手机号未注册', 404);
+            }
+
+            // 更新密码
+            $user->password = \Illuminate\Support\Facades\Hash::make($password);
+            $user->save();
+
+            return $this->success(null, '密码重置成功');
+
+        } catch (\Exception $e) {
+            return $this->handleException($e, '手机号重置密码');
+        }
+    }
 }
