@@ -16,45 +16,20 @@ if [ "$APP_ENV" = "production" ] || [ -n "$ZEABUR_SERVICE_ID" ]; then
         echo "Using .env.production as base configuration..."
         cp /var/www/html/.env.production /var/www/html/.env
         
-        # 替换环境变量占位符（Zeabur注入的环境变量）
+        # 通用占位符替换：将所有 ${VAR_NAME} 替换为对应环境变量的值
         echo "Replacing environment variable placeholders..."
         
-        # 数据库配置 - 优先使用MYSQL_*变量（Zeabur服务引用）
-        ACTUAL_DB_HOST="${MYSQL_HOST:-${DB_HOST:-localhost}}"
-        ACTUAL_DB_USER="${MYSQL_USERNAME:-${DB_USERNAME:-root}}"
-        ACTUAL_DB_PASS="${MYSQL_PASSWORD:-${DB_PASSWORD:-}}"
+        # 遍历所有环境变量，替换 .env 中的 ${KEY} 占位符
+        while IFS='=' read -r key value; do
+            # 跳过空行和无效变量名
+            if [ -n "$key" ] && echo "$key" | grep -qE '^[A-Za-z_][A-Za-z0-9_]*$'; then
+                # 转义特殊字符用于 sed
+                escaped_value=$(echo "$value" | sed 's/[&/\]/\\&/g')
+                sed -i "s|\${${key}}|${escaped_value}|g" /var/www/html/.env 2>/dev/null
+            fi
+        done < <(env)
         
-        if [ -n "$ACTUAL_DB_HOST" ]; then
-            sed -i "s|\${DB_HOST}|${ACTUAL_DB_HOST}|g" /var/www/html/.env
-            # 也替换硬编码的占位符
-            sed -i "s|DB_HOST=\${DB_HOST}|DB_HOST=${ACTUAL_DB_HOST}|g" /var/www/html/.env
-            echo "DB_HOST replaced: ${ACTUAL_DB_HOST}"
-        fi
-        if [ -n "$ACTUAL_DB_USER" ]; then
-            sed -i "s|\${DB_USERNAME}|${ACTUAL_DB_USER}|g" /var/www/html/.env
-            sed -i "s|DB_USERNAME=\${DB_USERNAME}|DB_USERNAME=${ACTUAL_DB_USER}|g" /var/www/html/.env
-            echo "DB_USERNAME replaced: ${ACTUAL_DB_USER}"
-        fi
-        if [ -n "$ACTUAL_DB_PASS" ]; then
-            sed -i "s|\${DB_PASSWORD}|${ACTUAL_DB_PASS}|g" /var/www/html/.env
-            sed -i "s|DB_PASSWORD=\${DB_PASSWORD}|DB_PASSWORD=${ACTUAL_DB_PASS}|g" /var/www/html/.env
-            echo "DB_PASSWORD replaced"
-        fi
-        
-        # Redis配置
-        if [ -n "$REDIS_HOST" ]; then
-            sed -i "s|\${REDIS_HOST}|${REDIS_HOST}|g" /var/www/html/.env
-            echo "REDIS_HOST replaced: ${REDIS_HOST}"
-        fi
-        if [ -n "$REDIS_PASSWORD" ]; then
-            sed -i "s|\${REDIS_PASSWORD}|${REDIS_PASSWORD}|g" /var/www/html/.env
-            echo "REDIS_PASSWORD replaced"
-        fi
-        
-        # 兼容旧的占位符格式
-        if [ -n "$MYSQL_PASSWORD" ]; then
-            sed -i "s|\${MYSQL_PASSWORD}|${MYSQL_PASSWORD}|g" /var/www/html/.env
-        fi
+        echo "Environment variable placeholders replaced"
     fi
     
     # Zeabur环境变量会自动覆盖.env中的值
