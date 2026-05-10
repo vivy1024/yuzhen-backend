@@ -5,6 +5,22 @@
 
 ---
 
+## #57 (fix) 安全加固 — P0+P1 漏洞修复 — 2026-05-10
+
+### P0 修复
+- **SEC-1**: `chat_session_rating.php` store-vector 端点添加用户归属校验，防止越权操作
+- **SEC-2**: `chat_session_rating.php` + `personalization_grading.php` 所有 catch 块移除 `$e->getMessage()` 返回，改为通用错误消息
+- **SEC-3**: 新建 `InternalNetworkMiddleware.php`，/metrics 端点仅允许内部网络访问
+- **SEC-4**: `UsageService::incrementUsage()` 重写，使用 `DB::transaction` + `lockForUpdate` 消除 TOCTOU 竞态
+
+### P1 修复
+- **SEC-5**: `Kernel.php` 恢复全局 API 限流 `throttle:120,1`
+- **SEC-6**: `personalization_grading.php` 的 `/grade/{grade}`、`/grades`、`/stats-overview` 添加 `jwt.auth` 中间件
+- **SEC-7**: `AvatarController.php` 文件上传改用 `guessExtension()` 防止扩展名伪造
+- **SEC-8**: `chat_session_rating.php` 分页参数添加 `min($limit, 100)` 上限
+
+---
+
 ## #56 (feat) Agent v2 接口对齐 — Thread + Approval + Request 重构 — 2026-05-09
 
 - `AiChatRequest.php`: 移除 strategy/template_id/persona_id，新增 thread_id

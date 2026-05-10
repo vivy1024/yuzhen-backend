@@ -41,7 +41,7 @@ class Kernel extends HttpKernel
 
         'api' => [
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            // \Illuminate\Routing\Middleware\ThrottleRequests::class.':api', // ❌ 移除全局限流，改为路由级别控制
+            \Illuminate\Routing\Middleware\ThrottleRequests::class.':120,1', // SEC-5: 全局限流 120次/分钟
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];
@@ -71,5 +71,6 @@ class Kernel extends HttpKernel
         'jwt.auth' => \App\Modules\Auth\Middleware\JwtAuthenticate::class, // ✅ JWT认证中间件
         'admin' => \App\Http\Middleware\AdminMiddleware::class, // ✅ 管理员中间件
         'deprecated' => \App\Http\Middleware\DeprecatedRouteLogger::class, // ✅ 废弃路由日志
+        'internal.network' => \App\Http\Middleware\InternalNetworkMiddleware::class, // ✅ SEC-3: 内部网络限制
     ];
 }

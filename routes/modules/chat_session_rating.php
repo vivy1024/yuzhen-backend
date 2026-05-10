@@ -130,12 +130,13 @@ Route::post('/sessions/{session_id}/rate', function (Request $request, $session_
     } catch (\Exception $e) {
         \Log::error('会话评分失败: ' . $e->getMessage(), [
             'session_id' => $session_id,
-            'user_id' => auth()->id()
+            'user_id' => auth()->id(),
+            'trace' => $e->getTraceAsString(),
         ]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '评分失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
 })->middleware('jwt.auth');
@@ -153,6 +154,14 @@ Route::post('/sessions/{session_id}/store-vector', function (Request $request, $
                 'code' => 404,
                 'msg' => '会话不存在'
             ], 404);
+        }
+
+        // SEC-1: 归属校验 — 只允许操作自己的会话
+        if ($session->user_id !== auth()->id()) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '无权操作此会话'
+            ], 403);
         }
 
         // 检查质量门槛
@@ -188,12 +197,13 @@ Route::post('/sessions/{session_id}/store-vector', function (Request $request, $
 
     } catch (\Exception $e) {
         \Log::error('向量存储失败: ' . $e->getMessage(), [
-            'session_id' => $session_id
+            'session_id' => $session_id,
+            'trace' => $e->getTraceAsString(),
         ]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '向量存储失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
 })->middleware('jwt.auth');
@@ -242,11 +252,14 @@ Route::get('/sessions/{session_id}/personalization-report', function (Request $r
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('获取个性化报告失败: ' . $e->getMessage());
+        \Log::error('获取个性化报告失败: ' . $e->getMessage(), [
+            'session_id' => $session_id,
+            'trace' => $e->getTraceAsString(),
+        ]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '获取报告失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
 })->middleware('jwt.auth');
@@ -278,9 +291,9 @@ Route::get('/sessions/user/{user_id}', function (Request $request, $user_id) {
             $query->where('fewshot_eligible', true);
         }
 
-        // 分页
-        $limit = $request->input('limit', 20);
-        $page = $request->input('page', 1);
+        // SEC-8: 分页参数上限校验
+        $limit = min((int) $request->input('limit', 20), 100);
+        $page = max(1, (int) $request->input('page', 1));
         $sessions = $query->paginate($limit, ['*'], 'page', $page);
 
         // 计算质量统计
@@ -298,11 +311,14 @@ Route::get('/sessions/user/{user_id}', function (Request $request, $user_id) {
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('获取用户会话失败: ' . $e->getMessage());
+        \Log::error('获取用户会话失败: ' . $e->getMessage(), [
+            'user_id' => $user_id,
+            'trace' => $e->getTraceAsString(),
+        ]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '获取失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
 })->middleware('jwt.auth');
@@ -365,11 +381,13 @@ Route::get('/sessions/learning-stats', function (Request $request) {
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('获取学习统计失败: ' . $e->getMessage());
+        \Log::error('获取学习统计失败: ' . $e->getMessage(), [
+            'trace' => $e->getTraceAsString(),
+        ]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '获取失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
 })->middleware('jwt.auth');

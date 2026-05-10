@@ -33,7 +33,8 @@ class AvatarController extends BaseController
             }
 
             $file = $request->file('avatar');
-            $extension = $file->getClientOriginalExtension();
+            // SEC-7: 使用 MIME 检测扩展名，防止客户端伪造
+            $extension = $file->guessExtension() ?: 'jpg';
             $filename = $user->id . '.' . $extension;
 
             // 删除旧头像

@@ -17,7 +17,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Prometheus metrics 端点（无需认证，通过网络策略限制访问）
-Route::get('/metrics', [\App\Http\Controllers\PrometheusMetricsController::class, 'metrics']);
+// Prometheus metrics 端点（SEC-3: 仅允许内部网络访问）
+Route::get('/metrics', [\App\Http\Controllers\PrometheusMetricsController::class, 'metrics'])
+    ->middleware('internal.network');
 
 // AI代理路由已移至 routes/api.php（使用api中间件组，避免CORS和CSRF问题）

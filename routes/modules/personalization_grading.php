@@ -45,11 +45,11 @@ Route::get('/report', function (Request $request) {
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('获取个性化分级报告失败: ' . $e->getMessage());
+        \Log::error('获取个性化分级报告失败: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '获取失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
 })->middleware('jwt.auth');
@@ -82,11 +82,11 @@ Route::post('/utilization', function (Request $request) {
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('计算档案利用率失败: ' . $e->getMessage());
+        \Log::error('计算档案利用率失败: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '计算失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
 })->middleware('jwt.auth');
@@ -122,14 +122,14 @@ Route::get('/grade/{grade}', function (Request $request, $grade) {
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('获取等级信息失败: ' . $e->getMessage());
+        \Log::error('获取等级信息失败: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '获取失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
-});
+})->middleware('jwt.auth'); // SEC-6: 添加认证
 
 /**
  * 获取所有等级信息
@@ -153,14 +153,14 @@ Route::get('/grades', function (Request $request) {
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('获取等级列表失败: ' . $e->getMessage());
+        \Log::error('获取等级列表失败: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '获取失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
-});
+})->middleware('jwt.auth'); // SEC-6: 添加认证
 
 /**
  * 获取升级提示
@@ -197,11 +197,11 @@ Route::get('/upgrade-prompt', function (Request $request) {
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('获取升级提示失败: ' . $e->getMessage());
+        \Log::error('获取升级提示失败: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '获取失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
 })->middleware('jwt.auth');
@@ -239,11 +239,11 @@ Route::get('/upgrade-benefits', function (Request $request) {
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('获取升级收益说明失败: ' . $e->getMessage());
+        \Log::error('获取升级收益说明失败: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '获取失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
 })->middleware('jwt.auth');
@@ -280,11 +280,11 @@ Route::get('/demo-data', function (Request $request) {
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('获取B端演示数据失败: ' . $e->getMessage());
+        \Log::error('获取B端演示数据失败: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '获取失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
 })->middleware('jwt.auth');
@@ -331,11 +331,11 @@ Route::get('/stats-overview', function (Request $request) {
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('获取统计概览失败: ' . $e->getMessage());
+        \Log::error('获取统计概览失败: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
         return response()->json([
             'code' => 500,
-            'msg' => '获取失败: ' . $e->getMessage()
+            'msg' => '服务暂时不可用，请稍后重试'
         ], 500);
     }
-});
+})->middleware('jwt.auth'); // SEC-6: 添加认证（防止泄露运营数据）

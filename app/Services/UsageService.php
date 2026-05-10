@@ -233,86 +233,102 @@ class UsageService
             ];
         }
         
-        // 先检查是否可以执行
-        $canExecute = $this->canExecuteQuery($userId, $mode);
-        
-        if (!$canExecute['allowed']) {
-            return [
-                'success' => false,
-                'used_credits' => false,
-                'new_count' => 0,
-                'remaining' => 0,
-                'message' => $canExecute['message'],
-            ];
-        }
-        
-        $usedCredits = false;
-        
         try {
-            DB::beginTransaction();
-            
-            // 获取今日用量记录
-            $usage = UsageStat::getOrCreateTodayUsage($userId);
-            $limits = $this->getMembershipService()->getEffectiveLimits($userId);
-            
-            $limitKey = "daily_{$mode}_limit";
-            $limit = $limits[$limitKey];
-            
-            // 检查是否需要使用额外额度
-            $currentUsed = $mode === 'dag' ? $usage->dag_queries : $usage->agent_queries;
-            
-            if ($currentUsed >= $limit) {
-                // 每日限额已用完，需要扣减额外额度
-                $deducted = $this->getCreditService()->deductCredits($userId, $mode);
+            // SEC-4: 将限额校验和计数增加放在同一事务内，使用 lockForUpdate 防止 TOCTOU 竞态
+            $result = DB::transaction(function () use ($userId, $mode) {
+                // 在事务内获取并锁定用量记录
+                $usage = UsageStat::where('user_id', $userId)
+                    ->where('date', now()->toDateString())
+                    ->lockForUpdate()
+                    ->first();
                 
-                if (!$deducted['success']) {
-                    DB::rollBack();
-                    return [
-                        'success' => false,
-                        'used_credits' => false,
-                        'new_count' => $currentUsed,
-                        'remaining' => 0,
-                        'message' => '额度不足，无法执行查询',
-                    ];
+                if (!$usage) {
+                    $usage = UsageStat::create([
+                        'user_id' => $userId,
+                        'date' => now()->toDateString(),
+                        'dag_queries' => 0,
+                        'agent_queries' => 0,
+                    ]);
+                    // 重新锁定新创建的记录
+                    $usage = UsageStat::where('id', $usage->id)->lockForUpdate()->first();
+                }
+
+                $limits = $this->getMembershipService()->getEffectiveLimits($userId);
+                $limitKey = "daily_{$mode}_limit";
+                $limit = $limits[$limitKey];
+                
+                // 在锁定状态下校验限额
+                $currentUsed = $mode === 'dag' ? $usage->dag_queries : $usage->agent_queries;
+                $usedCredits = false;
+                
+                // 检查是否有额外额度可用
+                $hasExtraCredits = $this->getCreditService()->getBalance($userId) > 0;
+                $totalAllowed = $limit + ($hasExtraCredits ? PHP_INT_MAX : 0);
+                
+                if ($currentUsed >= $limit) {
+                    // 每日限额已用完，需要扣减额外额度
+                    $deducted = $this->getCreditService()->deductCredits($userId, $mode);
+                    
+                    if (!$deducted['success']) {
+                        return [
+                            'success' => false,
+                            'used_credits' => false,
+                            'new_count' => $currentUsed,
+                            'remaining' => 0,
+                            'message' => '额度不足，无法执行查询',
+                        ];
+                    }
+                    
+                    $usedCredits = true;
                 }
                 
-                $usedCredits = true;
+                // 增加用量计数
+                if ($mode === 'dag') {
+                    $newCount = $usage->incrementDagQueries();
+                } else {
+                    $newCount = $usage->incrementAgentQueries();
+                }
+                
+                return [
+                    'success' => true,
+                    'used_credits' => $usedCredits,
+                    'new_count' => $newCount,
+                ];
+            });
+            
+            if (!$result['success']) {
+                return [
+                    'success' => false,
+                    'used_credits' => $result['used_credits'],
+                    'new_count' => $result['new_count'],
+                    'remaining' => $result['remaining'] ?? 0,
+                    'message' => $result['message'],
+                ];
             }
             
-            // 增加用量计数
-            if ($mode === 'dag') {
-                $newCount = $usage->incrementDagQueries();
-            } else {
-                $newCount = $usage->incrementAgentQueries();
-            }
-            
-            DB::commit();
-            
-            // 重新获取剩余次数
+            // 重新获取剩余次数（事务外，非关键路径）
             $todayUsage = $this->getTodayUsage($userId);
             $remaining = $todayUsage["{$mode}_remaining"];
             
             Log::info('用量计数已增加', [
                 'user_id' => $userId,
                 'mode' => $mode,
-                'new_count' => $newCount,
-                'used_credits' => $usedCredits,
+                'new_count' => $result['new_count'],
+                'used_credits' => $result['used_credits'],
                 'remaining' => $remaining,
             ]);
             
             return [
                 'success' => true,
-                'used_credits' => $usedCredits,
-                'new_count' => $newCount,
+                'used_credits' => $result['used_credits'],
+                'new_count' => $result['new_count'],
                 'remaining' => $remaining,
-                'message' => $usedCredits 
+                'message' => $result['used_credits'] 
                     ? "已使用额外额度（剩余{$remaining}次）" 
                     : "查询成功（剩余{$remaining}次）",
             ];
             
         } catch (\Exception $e) {
-            DB::rollBack();
-            
             Log::error('增加用量计数失败', [
                 'user_id' => $userId,
                 'mode' => $mode,
