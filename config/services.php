@@ -40,6 +40,10 @@ return [
         'url' => env('DAML_RAG_URL', 'http://fitness_daml_rag:8001'),
     ],
 
+    'yuzhenfork' => [
+        'url' => env('YUZHENFORK_URL', 'http://host.docker.internal:4567'),
+    ],
+
     'mco' => [
         'url' => env('MCO_BASE_URL', 'http://localhost:8001'),
     ],
