@@ -70,6 +70,9 @@ require __DIR__.'/modules/usage.php';
 // Credit模块（积分管理）✅
 require __DIR__.'/modules/credit.php';
 
+// Credits v2模块（积分系统重构）✅
+require __DIR__.'/modules/credits.php';
+
 // Internal API（MCP/CrewAI访问）✅
 require __DIR__.'/internal.php';
 

@@ -5,6 +5,7 @@ namespace App\Modules\Auth\Services;
 use App\Modules\User\Models\User;
 use App\Modules\Auth\Events\UserLoggedIn;
 use App\Modules\Auth\Events\UserLoggedOut;
+use App\Modules\Credits\Services\CreditService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Cache;
@@ -137,6 +138,9 @@ class AuthService
         
         // 创建用户档案
         $user->profile()->create([]);
+        
+        // 创建积分账户
+        app(CreditService::class)->getOrCreateAccount($user->id);
         
         // 生成Token
         $token = $this->jwtService->generateToken($user);
