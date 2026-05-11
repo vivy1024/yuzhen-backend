@@ -38,6 +38,7 @@ class PhoneRegisterRequest extends FormRequest
             ],
             'phone_code' => 'required|string|size:6',
             'password' => 'required|string|min:6|confirmed',
+            'invite_code' => 'nullable|string|size:8|alpha_num',
         ];
     }
 

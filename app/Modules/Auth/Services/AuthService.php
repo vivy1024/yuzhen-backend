@@ -6,6 +6,7 @@ use App\Modules\User\Models\User;
 use App\Modules\Auth\Events\UserLoggedIn;
 use App\Modules\Auth\Events\UserLoggedOut;
 use App\Modules\Credits\Services\CreditService;
+use App\Modules\Credits\Services\InviteService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Cache;
@@ -133,6 +134,14 @@ class AuthService
         $data['role'] = 'user'; // 默认角色
         $data['status'] = 1; // 默认激活
         
+        // 提取邀请码（创建用户前取出，不写入 users 表的 create data）
+        $inviteCode = $data['invite_code'] ?? null;
+        unset($data['invite_code']);
+
+        // 生成邀请码给新用户
+        $inviteService = app(InviteService::class);
+        $data['invite_code'] = $inviteService->generateInviteCode();
+
         // 创建用户
         $user = User::create($data);
         
@@ -141,6 +150,18 @@ class AuthService
         
         // 创建积分账户
         app(CreditService::class)->getOrCreateAccount($user->id);
+
+        // 处理邀请码（如果注册时带了邀请码）
+        if ($inviteCode) {
+            $inviteResult = $inviteService->processInvite($user->id, $inviteCode);
+            if (!$inviteResult['success']) {
+                Log::info('邀请码处理失败（不影响注册）', [
+                    'user_id' => $user->id,
+                    'invite_code' => $inviteCode,
+                    'reason' => $inviteResult['message'],
+                ]);
+            }
+        }
         
         // 生成Token
         $token = $this->jwtService->generateToken($user);

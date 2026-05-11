@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Modules\Credits\Controllers\CreditController;
+use App\Modules\Credits\Controllers\InviteController;
 use App\Modules\Credits\Controllers\InternalCreditController;
 
 /**
@@ -29,6 +30,13 @@ Route::prefix('credits/v2')->middleware(['jwt.auth'])->group(function () {
     // 每日签到
     // POST /api/credits/v2/checkin
     Route::post('/checkin', [CreditController::class, 'checkin']);
+
+    // ===== 邀请好友 =====
+    // GET /api/credits/v2/invite/code — 获取我的邀请码
+    Route::get('/invite/code', [InviteController::class, 'code']);
+
+    // GET /api/credits/v2/invite/stats — 邀请统计
+    Route::get('/invite/stats', [InviteController::class, 'stats']);
 });
 
 // ========== 内部 API（internal.api 中间件）==========

@@ -26,6 +26,7 @@ class RegisterRequest extends FormRequest
             'phone' => 'nullable|string|regex:/^1[3-9]\d{9}$/',
             'gender' => 'nullable|string|in:male,female',
             'age' => 'nullable|integer|min:13|max:120',
+            'invite_code' => 'nullable|string|size:8|alpha_num',
         ];
     }
 

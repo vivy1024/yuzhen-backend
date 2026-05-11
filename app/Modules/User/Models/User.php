@@ -81,6 +81,8 @@ class User extends Authenticatable
         'membership_tier',
         'first_purchase_used',
         'referral_code',
+        'invite_code',
+        'invited_by',
         // 智能训练系统新增字段
         'preferred_training_time',
         'body_type',
