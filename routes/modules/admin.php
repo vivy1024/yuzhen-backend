@@ -10,6 +10,9 @@ use App\Modules\Admin\Controllers\UserCreditsController;
 use App\Modules\Admin\Controllers\AdminKpiController;
 use App\Http\Controllers\Admin\DataMigrationController;
 use App\Http\Controllers\Api\Admin\MetricsController as AdminMetricsController;
+use App\Modules\Credits\Controllers\AdminCreditController;
+use App\Modules\Credits\Controllers\AdminCostController;
+use App\Modules\Credits\Controllers\AdminApiKeyController;
 
 /**
  * Admin Module Routes
@@ -163,6 +166,30 @@ Route::prefix('admin')->middleware(['jwt.auth', 'admin', 'throttle:60,1'])->grou
         Route::get('/growth', [AdminKpiController::class, 'growth']);
         Route::get('/activity', [AdminKpiController::class, 'activity']);
         Route::get('/retention', [AdminKpiController::class, 'retention']);
+    });
+
+    // ========== 积分管理（Credits v2） ==========
+    Route::prefix('credits')->group(function () {
+        Route::get('/overview', [AdminCreditController::class, 'overview']);
+        Route::get('/users', [AdminCreditController::class, 'userList']);
+        Route::post('/adjust', [AdminCreditController::class, 'adjustCredits']);
+        Route::get('/pricing', [AdminCreditController::class, 'pricingList']);
+        Route::put('/pricing/{id}', [AdminCreditController::class, 'updatePricing']);
+    });
+
+    // ========== 成本监控 ==========
+    Route::prefix('costs')->group(function () {
+        Route::get('/overview', [AdminCostController::class, 'overview']);
+        Route::get('/by-model', [AdminCostController::class, 'byModel']);
+        Route::get('/by-user', [AdminCostController::class, 'byUser']);
+        Route::get('/trend', [AdminCostController::class, 'trend']);
+        Route::get('/logs', [AdminCostController::class, 'logs']);
+    });
+
+    // ========== API Key 状态 ==========
+    Route::prefix('api-keys')->group(function () {
+        Route::get('/', [AdminApiKeyController::class, 'list']);
+        Route::put('/{id}', [AdminApiKeyController::class, 'update']);
     });
 
     // ========== 数据迁移（已完成，路由已移除） ==========
