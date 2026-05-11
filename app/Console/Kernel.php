@@ -12,7 +12,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // 每月 1 日 00:00 重置积分使用量
+        $schedule->command('credits:reset-monthly')
+            ->monthlyOn(1, '00:00')
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/credits-reset.log'));
     }
 
     /**
